@@ -7,21 +7,34 @@ import { r2Service, MediaFile, UploadResult } from '../../lib/r2-service';
 import { db, getCurrentTimestamp } from '../../lib/instant';
 import { useStore } from '../../lib/store-context';
 import { fileManager } from '../../lib/file-manager';
+import { log } from '../../lib/logger';
 import { id } from '@instantdb/react-native';
 import R2Image from './r2-image';
 
+interface FileData {
+  id: string;
+  title: string;
+  url: string;
+  type: string;
+  size: number;
+  storeId: string;
+  reference?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
 interface FileUploadProps {
-  onUploadComplete?: (fileId: string, fileData: any) => void;
+  onUploadComplete?: (fileId: string, fileData: FileData) => void;
   onUploadStart?: () => void;
   onUploadError?: (error: string) => void;
   allowMultiple?: boolean;
   acceptedTypes?: 'images' | 'videos' | 'documents' | 'all';
   maxFileSize?: number; // in bytes
   reference?: string; // reference to product/collection/option
-  existingFile?: any; // for replacement
+  existingFile?: FileData; // for replacement
   disabled?: boolean;
   className?: string;
-  style?: any;
+  style?: Record<string, unknown>;
 }
 
 export default function FileUpload({
@@ -183,7 +196,7 @@ export default function FileUpload({
       ]).start();
 
     } catch (error) {
-      console.error('Upload error:', error);
+      log.error('File upload failed', 'FileUpload', { error: error instanceof Error ? error.message : 'Unknown error' });
       const errorMessage = error instanceof Error ? error.message : 'Upload failed';
       onUploadError?.(errorMessage);
       Alert.alert('Upload Failed', errorMessage);

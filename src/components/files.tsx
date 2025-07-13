@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { db, getCurrentTimestamp } from '../lib/instant';
 import { useStore } from '../lib/store-context';
-import { log, trackError } from '../lib/logger';
+import { log, trackError, PerformanceMonitor } from '../lib/logger';
 import { LoadingError, EmptyState } from './ui/error-boundary';
 import R2Image from './ui/r2-image';
 import FileUpload from './ui/file-upload';
@@ -29,7 +29,7 @@ interface FileItem {
 }
 
 export default function FilesScreen({ onClose }: FilesScreenProps) {
-  console.log('📱 FILES SCREEN: Component rendered');
+  log.debug('Component rendered', 'FilesScreen');
 
   const insets = useSafeAreaInsets();
 
@@ -43,9 +43,9 @@ export default function FilesScreen({ onClose }: FilesScreenProps) {
   // Use the files hook for real-time data
   const { files, isLoading, error, searchFiles } = useFileSelection();
 
-  // Add comprehensive logging
+  // Log files data for debugging
   useEffect(() => {
-    console.log('🗂️ FILES SCREEN: Files data:', {
+    log.debug('Files screen data loaded', 'FilesScreen', {
       filesCount: files.length,
       files: files.map(f => ({
         id: f.id,
@@ -59,18 +59,20 @@ export default function FilesScreen({ onClose }: FilesScreenProps) {
     });
   }, [files, isLoading, error]);
 
-  // Filter and search files using the hook
+  // Filter and search files using the hook - optimized with performance monitoring
   const filteredFiles = useMemo(() => {
-    const typeFilter = selectedType as 'images' | 'videos' | 'documents' | 'all';
-    const result = searchFiles(searchQuery, typeFilter);
-    console.log('🔍 FILES SCREEN: Filtered files:', {
-      selectedType,
-      searchQuery,
-      originalCount: files.length,
-      filteredCount: result.length,
-      filteredFiles: result.map(f => ({ id: f.id, title: f.title, url: f.url, type: f.type }))
+    return PerformanceMonitor.measure('filter-files', () => {
+      const typeFilter = selectedType as 'images' | 'videos' | 'documents' | 'all';
+      const result = searchFiles(searchQuery, typeFilter);
+      log.debug('Files filtered', 'FilesScreen', {
+        selectedType,
+        searchQuery,
+        originalCount: files.length,
+        filteredCount: result.length,
+        filteredFiles: result.map(f => ({ id: f.id, title: f.title, url: f.url, type: f.type }))
+      });
+      return result;
     });
-    return result;
   }, [searchFiles, searchQuery, selectedType, files.length]);
 
   // Handle back button
@@ -145,10 +147,10 @@ export default function FilesScreen({ onClose }: FilesScreenProps) {
               style={{ width: '100%', height: '100%' }}
               resizeMode="cover"
               onLoad={() => {
-                console.log('✅ FILES SCREEN: Image loaded successfully:', file.url);
+                log.debug('Files screen image loaded successfully', 'FilesScreen', { url: file.url });
               }}
               onError={(error) => {
-                console.log('❌ FILES SCREEN: Image load error:', { url: file.url, error });
+                log.error('Files screen image load error', 'FilesScreen', { url: file.url, error });
               }}
             />
           ) : (
@@ -260,6 +262,15 @@ export default function FilesScreen({ onClose }: FilesScreenProps) {
             renderItem={renderFileItem}
             keyExtractor={(item) => item.id}
             numColumns={2}
+            removeClippedSubviews={true}
+            maxToRenderPerBatch={10}
+            windowSize={10}
+            initialNumToRender={20}
+            getItemLayout={(data, index) => ({
+              length: 160, // Approximate height of each item
+              offset: 160 * Math.floor(index / 2),
+              index,
+            })}
             contentContainerStyle={{
               padding: 16,
               gap: 12

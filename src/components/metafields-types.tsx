@@ -31,7 +31,7 @@ export interface MetafieldSet {
     options?: string[];
     reference_type?: string;
   };
-  inputConfig?: any;
+  inputConfig?: Record<string, unknown>;
   required?: boolean;
   storeId: string;
   createdAt: Date;

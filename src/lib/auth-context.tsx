@@ -8,7 +8,7 @@ interface AuthContextType {
   isLoading: boolean;
   error: string | null;
   signOut: () => Promise<void>;
-  peopleaProfile: any | null;
+  peopleaProfile: PeopleaProfile | null;
   createPeopleaProfile: (data: Partial<PeopleaProfile>) => Promise<void>;
   updatePeopleaProfile: (data: Partial<PeopleaProfile>) => Promise<void>;
 }

@@ -27,17 +27,24 @@ import BottomTabContent from "../components/tabs";
 
 import { StoreProvider } from "../lib/store-context";
 import { log, trackError } from "../lib/logger";
+import { Product, Collection, Item } from "../lib/instant";
 import ErrorBoundary from "../components/ui/error-boundary";
 
 
 type Screen = 'space' | 'sales' | 'reports' | 'products' | 'collections' | 'options' | 'metafields' | 'menu' | 'option-create' | 'option-edit' | 'items' | 'locations' | 'files';
+
+interface NavigationData {
+  productId?: string;
+  product?: Product;
+  [key: string]: unknown;
+}
 
 interface NavigationState {
   screen: Screen;
   showBottomTabs: boolean;
   activeBottomTab: BottomTab;
   showManagement: boolean;
-  data?: any;
+  data?: NavigationData;
 }
 
 export default function Page() {
@@ -47,15 +54,15 @@ export default function Page() {
   const [showBottomTabs, setShowBottomTabs] = useState(true); // Start untoggled (bottom tabs shown, square icon not highlighted)
   const [isGridView, setIsGridView] = useState(false); // false = list view (default), true = grid view
   const [showManagement, setShowManagement] = useState(false); // false = product/collection list (default), true = management screen
-  const [productFormProduct, setProductFormProduct] = useState<any>(null); // Track product being edited in form
+  const [productFormProduct, setProductFormProduct] = useState<Product | null>(null); // Track product being edited in form
   const [isProductFormOpen, setIsProductFormOpen] = useState(false); // Track if product form is open
   const [productFormHasChanges, setProductFormHasChanges] = useState(false); // Track if product form has unsaved changes
-  const [collectionFormCollection, setCollectionFormCollection] = useState<any>(null); // Track collection being edited in form
+  const [collectionFormCollection, setCollectionFormCollection] = useState<Collection | null>(null); // Track collection being edited in form
   const [isCollectionFormOpen, setIsCollectionFormOpen] = useState(false); // Track if collection form is open
   const [isItemStockOpen, setIsItemStockOpen] = useState(false); // Track if item stock screen is open
-  const [itemStockItem, setItemStockItem] = useState<any>(null); // Track item being managed in stock screen
+  const [itemStockItem, setItemStockItem] = useState<Item | null>(null); // Track item being managed in stock screen
   const [optionSetData, setOptionSetData] = useState<{id?: string, name?: string}>({});
-  const [navigationData, setNavigationData] = useState<any>(null);
+  const [navigationData, setNavigationData] = useState<NavigationData | null>(null);
 
   // Navigation stack to track navigation history
   const [navigationStack, setNavigationStack] = useState<NavigationState[]>([{
@@ -394,7 +401,7 @@ export default function Page() {
               openItemStock(item);
             } else {
               // Handle regular item form opening if needed
-              console.log('Regular item form open:', item);
+              log.debug('Regular item form open', 'ItemsScreen', { item });
             }
           }}
           onClose={() => {

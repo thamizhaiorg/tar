@@ -11,7 +11,7 @@ interface LoadingButtonProps {
   size?: 'small' | 'medium' | 'large';
   icon?: string;
   fullWidth?: boolean;
-  style?: any;
+  style?: Record<string, unknown>;
 }
 
 export default function LoadingButton({

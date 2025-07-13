@@ -10,6 +10,7 @@ import MediaSelectionModal from './ui/media-selection-modal';
 import ProductSelect from './product-select';
 import { useStore } from '../lib/store-context';
 import { fileManager } from '../lib/file-manager';
+import { trackError, log } from '../lib/logger';
 
 interface CollectionFormScreenProps {
   collection?: any;
@@ -134,23 +135,22 @@ export default function CollectionFormScreen({ collection, onClose, onSave }: Co
         ...(isEditing ? {} : { createdAt: timestamp }),
       };
 
-      console.log('Saving collection with data:', collectionData);
+      log.info('Saving collection', 'CollectionForm', { collectionData, isEditing });
 
       if (isEditing) {
         await db.transact(db.tx.collections[collection.id].update(collectionData));
-        console.log('Collection updated successfully');
+        log.info('Collection updated successfully', 'CollectionForm', { collectionId: collection.id });
       } else {
         const newId = id();
         await db.transact(db.tx.collections[newId].update(collectionData));
-        console.log('Collection created successfully with ID:', newId);
+        log.info('Collection created successfully', 'CollectionForm', { collectionId: newId });
       }
 
       setHasChanges(false);
       onSave?.();
       onClose();
     } catch (error) {
-      console.error('Failed to save collection:', error);
-      console.error('Collection data that failed:', error);
+      trackError(error as Error, 'CollectionForm', { collectionData, isEditing });
       Alert.alert('Error', `Failed to save collection: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setLoading(false);

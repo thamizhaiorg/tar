@@ -1,17 +1,24 @@
 import React, { Component, ReactNode } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { trackError } from '../../lib/logger';
+
+interface ErrorInfo {
+  componentStack: string;
+  errorBoundary?: string;
+  errorBoundaryStack?: string;
+}
 
 interface Props {
   children: ReactNode;
   fallback?: ReactNode;
-  onError?: (error: Error, errorInfo: any) => void;
+  onError?: (error: Error, errorInfo: ErrorInfo) => void;
 }
 
 interface State {
   hasError: boolean;
   error: Error | null;
-  errorInfo: any;
+  errorInfo: ErrorInfo | null;
 }
 
 export default class ErrorBoundary extends Component<Props, State> {
@@ -24,8 +31,9 @@ export default class ErrorBoundary extends Component<Props, State> {
     return { hasError: true, error, errorInfo: null };
   }
 
-  componentDidCatch(error: Error, errorInfo: any) {
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    // Use trackError which already handles logging properly
+    trackError(error, 'ErrorBoundary', { errorInfo });
     this.setState({ errorInfo });
     this.props.onError?.(error, errorInfo);
   }
@@ -84,12 +92,7 @@ export default class ErrorBoundary extends Component<Props, State> {
 // Hook for functional components to handle errors
 export const useErrorHandler = () => {
   const handleError = (error: Error, context?: string) => {
-    console.error(`Error${context ? ` in ${context}` : ''}:`, error);
-    
-    // In production, you might want to send this to a crash reporting service
-    if (!__DEV__) {
-      // Example: Crashlytics.recordError(error);
-    }
+    trackError(error, context || 'useErrorHandler');
   };
 
   return { handleError };

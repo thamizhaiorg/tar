@@ -1,6 +1,7 @@
 // CRUD operations for Products and Collections
 import { id, lookup } from '@instantdb/react-native';
-import { db, getCurrentTimestamp, Product, Collection } from './instant';
+import { db, getCurrentTimestamp, Product, Collection, MediaItem, SaleInfo, SEOData, PromoInfo } from './instant';
+import { trackError } from './logger';
 
 // ============================================================================
 // PRODUCTS CRUD OPERATIONS
@@ -9,7 +10,7 @@ import { db, getCurrentTimestamp, Product, Collection } from './instant';
 export interface CreateProductData {
   title: string;
   image?: string;
-  medias?: any;
+  medias?: MediaItem[];
   excerpt?: string;
   notes?: string;
   type?: string;
@@ -19,24 +20,24 @@ export interface CreateProductData {
   saleprice?: number;
   vendor?: string;
   brand?: string;
-  options?: any;
-  modifiers?: any;
-  metafields?: any;
-  saleinfo?: any;
-  stores?: any;
+  options?: Record<string, unknown>;
+  modifiers?: Record<string, unknown>;
+  metafields?: Record<string, unknown>;
+  saleinfo?: SaleInfo;
+  stores?: string[];
   pos?: boolean;
   website?: boolean;
-  seo?: any;
+  seo?: SEOData;
   tags?: string; // Database expects JSON string
   cost?: number;
   qrcode?: string;
   stock?: number;
   publishAt?: number | string;
   publish?: boolean;
-  promoinfo?: any;
+  promoinfo?: PromoInfo;
   featured?: boolean;
-  relproducts?: any;
-  sellproducts?: any;
+  relproducts?: string[];
+  sellproducts?: string[];
 }
 
 // Option Set interfaces
@@ -188,7 +189,7 @@ export const deleteProduct = async (productId: string) => {
     await db.transact(db.tx.products[productId].delete());
     return { success: true };
   } catch (error) {
-    console.error('Error deleting product:', error);
+    trackError(error as Error, 'CRUD', { operation: 'deleteProduct', productId });
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 };
@@ -203,7 +204,7 @@ export const getProductByTitle = async (title: string) => {
     });
     return { success: true, product: data.products[0] || null };
   } catch (error) {
-    console.error('Error getting product by title:', error);
+    trackError(error as Error, 'CRUD', { operation: 'getProductByTitle', title });
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 };
@@ -244,7 +245,7 @@ export const createCollection = async (data: CreateCollectionData) => {
 
     return { success: true, id: collectionId };
   } catch (error) {
-    console.error('Error creating collection:', error);
+    trackError(error as Error, 'CRUD', { operation: 'createCollection', data });
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 };
@@ -308,7 +309,7 @@ export const bulkDeleteProducts = async (productIds: string[]) => {
     await db.transact(transactions);
     return { success: true };
   } catch (error) {
-    console.error('Error bulk deleting products:', error);
+    trackError(error as Error, 'CRUD', { operation: 'bulkDeleteProducts', productIds });
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 };
@@ -325,7 +326,7 @@ export const bulkUpdateProductsCollection = async (productIds: string[], collect
     await db.transact(transactions);
     return { success: true };
   } catch (error) {
-    console.error('Error bulk updating products collection:', error);
+    trackError(error as Error, 'CRUD', { operation: 'bulkUpdateProductsCollection', productIds, collectionId });
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 };

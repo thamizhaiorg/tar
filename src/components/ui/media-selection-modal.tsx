@@ -7,6 +7,7 @@ import { db } from '../../lib/instant';
 import { useStore } from '../../lib/store-context';
 import { useFiles } from '../../hooks/useFiles';
 import { fileManager } from '../../lib/file-manager';
+import { log } from '../../lib/logger';
 import R2Image from './r2-image';
 
 interface MediaItem {
@@ -53,9 +54,9 @@ export default function MediaSelectionModal({
   // Use the files hook to get images only
   const { files, uploadFile } = useFiles({ type: 'images' });
 
-  // Debug: Log files count and data
+  // Log files data for debugging
   useEffect(() => {
-    console.log('📁 MEDIA MODAL: Files data:', {
+    log.debug('Media selection modal files data', 'MediaSelectionModal', {
       filesCount: files.length,
       files: files.map(f => ({
         id: f.id,
@@ -230,10 +231,10 @@ export default function MediaSelectionModal({
               style={{ width: '100%', height: '100%' }}
               resizeMode="cover"
               onLoad={() => {
-                console.log('✅ MEDIA MODAL: Image loaded successfully:', media.url);
+                log.debug('Image loaded successfully', 'MediaSelectionModal', { url: media.url });
               }}
               onError={(error) => {
-                console.log('❌ MEDIA MODAL: Image load error:', { url: media.url, error });
+                log.error('Image load error', 'MediaSelectionModal', { url: media.url, error });
               }}
             />
           </View>

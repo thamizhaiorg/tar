@@ -1,5 +1,6 @@
 import { db } from './instant';
 import { id } from '@instantdb/react-native';
+import { log, trackError } from './logger';
 
 export interface Location {
   id: string;
@@ -186,7 +187,7 @@ export async function migrateItemsToLocationSystem(storeId: string): Promise<voi
 
           migratedCount++;
         } catch (itemError) {
-          console.error(`Failed to process item ${item.id}:`, itemError);
+          trackError(itemError as Error, 'InventorySetup', { itemId: item.id, operation: 'migrateItemsToLocationSystem' });
           // Continue with other items
         }
       }
@@ -195,19 +196,19 @@ export async function migrateItemsToLocationSystem(storeId: string): Promise<voi
       if (transactions.length > 0) {
         try {
           await db.transact(transactions);
-          console.log(`Migrated batch of ${transactions.length / 2} items`);
+          log.info(`Migrated batch of ${transactions.length / 2} items`, 'InventorySetup');
         } catch (batchError) {
-          console.error('Failed to execute batch transaction:', batchError);
+          trackError(batchError as Error, 'InventorySetup', { operation: 'batchTransaction', transactionCount: transactions.length });
           // Continue with next batch
         }
       }
     }
 
-    console.log(`Migration complete: ${migratedCount} items migrated to location system`);
+    log.info(`Migration complete: ${migratedCount} items migrated to location system`, 'InventorySetup', { migratedCount });
   } catch (error) {
-    console.error('Failed to migrate items to location system:', error);
+    trackError(error as Error, 'InventorySetup', { operation: 'migrateItemsToLocationSystem' });
     // Don't throw error to prevent app startup failure
-    console.log('Migration failed but continuing app startup...');
+    log.warn('Migration failed but continuing app startup', 'InventorySetup');
   }
 }
 
@@ -392,10 +393,10 @@ export async function initializeInventorySystem(): Promise<void> {
       }
     }
 
-    console.log(`🏁 Inventory system initialization complete: ${successCount} successful, ${errorCount} failed`);
+    log.info(`Inventory system initialization complete: ${successCount} successful, ${errorCount} failed`, 'InventorySetup', { successCount, errorCount });
   } catch (error) {
-    console.error('❌ Failed to initialize inventory system:', error);
+    trackError(error as Error, 'InventorySetup', { operation: 'initializeInventorySystem' });
     // Don't throw error to prevent app startup failure
-    console.log('Inventory initialization failed but continuing app startup...');
+    log.warn('Inventory initialization failed but continuing app startup', 'InventorySetup');
   }
 }

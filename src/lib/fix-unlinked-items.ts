@@ -1,10 +1,11 @@
 // Fix unlinked items script
 import { db } from './instant';
+import { log } from './logger';
 
 export const fixUnlinkedItems = async (storeId: string) => {
   try {
-    console.log('Starting fix for unlinked items...');
-    
+    log.info('Starting fix for unlinked items', 'FixUnlinkedItems', { storeId });
+
     // Query all items for the store
     const { data: allItemsData } = await db.queryOnce({
       items: {
@@ -14,42 +15,42 @@ export const fixUnlinkedItems = async (storeId: string) => {
     });
 
     const allItems = allItemsData?.items || [];
-    console.log(`Found ${allItems.length} total items`);
+    log.info(`Found ${allItems.length} total items`, 'FixUnlinkedItems', { itemsCount: allItems.length });
     
     // Find items that have productId but no product link
     const unlinkedItems = allItems.filter(item => 
       item.productId && (!item.product || (item.product as any).length === 0)
     );
 
-    console.log(`Found ${unlinkedItems.length} unlinked items`);
+    log.info(`Found ${unlinkedItems.length} unlinked items`, 'FixUnlinkedItems', { unlinkedCount: unlinkedItems.length });
 
     if (unlinkedItems.length > 0) {
       // Create link transactions for unlinked items
       const linkTransactions = unlinkedItems.map(item => {
-        console.log(`Linking item ${item.id} to product ${item.productId}`);
+        log.debug(`Linking item ${item.id} to product ${item.productId}`, 'FixUnlinkedItems', { itemId: item.id, productId: item.productId });
         return db.tx.items[item.id].link({ product: item.productId });
       });
 
       await db.transact(linkTransactions);
-      console.log(`Successfully fixed ${unlinkedItems.length} unlinked items`);
-      
-      return { 
-        success: true, 
+      log.info(`Successfully fixed ${unlinkedItems.length} unlinked items`, 'FixUnlinkedItems', { fixedCount: unlinkedItems.length });
+
+      return {
+        success: true,
         fixed: unlinkedItems.length,
         message: `Fixed ${unlinkedItems.length} unlinked items`
       };
     } else {
-      console.log('No unlinked items found');
-      return { 
-        success: true, 
+      log.info('No unlinked items found', 'FixUnlinkedItems');
+      return {
+        success: true,
         fixed: 0,
         message: 'No unlinked items found'
       };
     }
   } catch (error) {
-    console.error('Failed to fix unlinked items:', error);
-    return { 
-      success: false, 
+    log.error('Failed to fix unlinked items', 'FixUnlinkedItems', { error: error instanceof Error ? error.message : 'Unknown error' });
+    return {
+      success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
       message: 'Failed to fix unlinked items'
     };
@@ -83,7 +84,7 @@ export const verifyItemLinks = async (storeId: string) => {
       }))
     };
   } catch (error) {
-    console.error('Failed to verify item links:', error);
+    log.error('Failed to verify item links', 'VerifyItemLinks', { error: error instanceof Error ? error.message : 'Unknown error' });
     return null;
   }
 };

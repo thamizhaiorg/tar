@@ -6,7 +6,7 @@ import { db, formatCurrency } from '../lib/instant';
 import ProductFormScreen from './prod-form';
 import InventoryAdjustmentScreen from './inventory';
 import { useStore } from '../lib/store-context';
-import { log, trackError } from '../lib/logger';
+import { log, trackError, PerformanceMonitor } from '../lib/logger';
 import { LoadingError, EmptyState } from './ui/error-boundary';
 
 import R2Image from './ui/r2-image';
@@ -165,32 +165,37 @@ export default function ProductsScreen({ isGridView = false, onProductFormOpen, 
 
   // Filter products based on search and status - memoized for performance
   const filteredProducts = useMemo(() => {
-    return products.filter((product: any) => {
-      const title = product.title || '';
-      const category = product.category || '';
-      const brand = product.brand || '';
-      const tags = product.tags || [];
+    return PerformanceMonitor.measure('filter-products', () => {
       const searchTerm = searchQuery.toLowerCase();
 
-      // Search filter - handle tags as array
-      const tagsString = Array.isArray(tags) ? tags.join(' ') : (typeof tags === 'string' ? tags : '');
-      const matchesSearch = (title || '').toLowerCase().includes(searchTerm) ||
-             (category || '').toLowerCase().includes(searchTerm) ||
-             (brand || '').toLowerCase().includes(searchTerm) ||
-             (tagsString || '').toLowerCase().includes(searchTerm);
+      return products.filter((product: any) => {
+        const title = product.title || '';
+        const category = product.category || '';
+        const brand = product.brand || '';
+        const tags = product.tags || [];
 
-      // Status filter - Simple and intuitive
-      let matchesStatus = true;
-      if (activeFilter === 'Active') {
-        // Active: status is true (or undefined/null which defaults to active)
-        matchesStatus = product.status !== false;
-      } else if (activeFilter === 'Draft') {
-        // Draft: status is explicitly false
-        matchesStatus = product.status === false;
-      }
-      // 'All' filter shows everything (matchesStatus remains true)
+        // Search filter - handle tags as array
+        const tagsString = Array.isArray(tags) ? tags.join(' ') : (typeof tags === 'string' ? tags : '');
+        const matchesSearch = !searchTerm || (
+          title.toLowerCase().includes(searchTerm) ||
+          category.toLowerCase().includes(searchTerm) ||
+          brand.toLowerCase().includes(searchTerm) ||
+          tagsString.toLowerCase().includes(searchTerm)
+        );
 
-      return matchesSearch && matchesStatus;
+        // Status filter - Simple and intuitive
+        let matchesStatus = true;
+        if (activeFilter === 'Active') {
+          // Active: status is true (or undefined/null which defaults to active)
+          matchesStatus = product.status !== false;
+        } else if (activeFilter === 'Draft') {
+          // Draft: status is explicitly false
+          matchesStatus = product.status === false;
+        }
+        // 'All' filter shows everything (matchesStatus remains true)
+
+        return matchesSearch && matchesStatus;
+      });
     });
   }, [products, searchQuery, activeFilter]);
 
@@ -227,7 +232,7 @@ export default function ProductsScreen({ isGridView = false, onProductFormOpen, 
     }
   };
 
-  const handleProductSelect = (product: any) => {
+  const handleProductSelect = useCallback((product: any) => {
     if (isMultiSelectMode) {
       const newSelected = new Set(selectedProducts);
       if (newSelected.has(product.id)) {
@@ -244,7 +249,7 @@ export default function ProductsScreen({ isGridView = false, onProductFormOpen, 
     } else {
       handleEdit(product);
     }
-  };
+  }, [isMultiSelectMode, selectedProducts, handleEdit]);
 
   const handleDeleteSelected = () => {
     Alert.alert(

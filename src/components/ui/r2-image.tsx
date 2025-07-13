@@ -30,10 +30,10 @@ export default function R2Image({
 
   useEffect(() => {
     const loadSignedUrl = async () => {
-      console.log('🖼️ R2Image: Starting to load URL:', { url });
+      log.debug('Starting to load URL', 'R2Image', { url });
 
       if (!url) {
-        console.log('❌ R2Image: No URL provided');
+        log.warn('No URL provided', 'R2Image');
         setLoading(false);
         return;
       }
@@ -74,7 +74,7 @@ export default function R2Image({
 
           if (key) {
             const signed = await r2Service.getSignedUrl(key);
-            console.log('✅ R2Image: Generated signed URL:', { key, signed });
+            log.debug('Generated signed URL for R2 image', 'R2Image', { key, signed });
 
             if (!abortController.signal.aborted) {
               setSignedUrl(signed);
@@ -83,7 +83,7 @@ export default function R2Image({
             }
           } else {
             // Fallback to original URL
-            console.log('⚠️ R2Image: No key found, using original URL:', url);
+            log.warn('No key found for R2 image, using original URL', 'R2Image', { url });
             if (!abortController.signal.aborted) {
               setSignedUrl(url);
               urlCache.set(url, { url, timestamp: Date.now() });
@@ -91,7 +91,7 @@ export default function R2Image({
           }
         }
       } catch (err) {
-        console.log('❌ R2Image: Error loading URL:', { url, error: err });
+        log.error('Error loading R2 image URL', 'R2Image', { url, error: err instanceof Error ? err.message : 'Unknown error' });
         if (!abortController.signal.aborted) {
           setError(true);
           trackError(err as Error, 'R2Image', { url });
@@ -138,12 +138,12 @@ export default function R2Image({
       source={{ uri: signedUrl }}
       style={style}
       onError={(e) => {
-        console.log('❌ R2Image: Image component error:', { signedUrl, error: e });
+        log.error('R2 image component error', 'R2Image', { signedUrl, error: e });
         setError(true);
         onError?.(e);
       }}
       onLoad={() => {
-        console.log('✅ R2Image: Image component loaded successfully:', signedUrl);
+        log.debug('R2 image component loaded successfully', 'R2Image', { signedUrl });
         onLoad?.();
       }}
     />

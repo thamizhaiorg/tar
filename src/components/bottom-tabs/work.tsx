@@ -188,7 +188,7 @@ export default function WorkspaceContent({ currentScreen }: WorkspaceContentProp
 
   const renderCollectionsWorkspace = () => {
     const totalCollections = collections.length;
-    const productsInCollections = 0; // TODO: Implement collection relationships
+    const productsInCollections = 0; // Collection relationships not yet implemented
     const unassignedProducts = products.length;
 
     return (
@@ -239,7 +239,7 @@ export default function WorkspaceContent({ currentScreen }: WorkspaceContentProp
             ) : (
               <View className="gap-3">
                 {collections.map((collection, index) => {
-                  const collectionProducts = 0; // TODO: Implement collection relationships
+                  const collectionProducts = 0; // Collection relationships not yet implemented
                   return (
                     <View key={index} className="bg-white border border-gray-200 rounded-lg p-4">
                       <Text className="font-medium text-gray-900">{collection.name}</Text>

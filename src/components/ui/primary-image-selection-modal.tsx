@@ -7,6 +7,7 @@ import { db } from '../../lib/instant';
 import { useStore } from '../../lib/store-context';
 import { useFiles } from '../../hooks/useFiles';
 import { fileManager } from '../../lib/file-manager';
+import { log } from '../../lib/logger';
 import R2Image from './r2-image';
 
 interface MediaItem {
@@ -38,7 +39,7 @@ export default function PrimaryImageSelectionModal({
   title = 'Select Primary Image',
   reference
 }: PrimaryImageSelectionModalProps) {
-  console.log('📱 PRIMARY IMAGE MODAL: Component rendered', { visible, reference });
+  log.debug('Component rendered', 'PrimaryImageSelectionModal', { visible, reference });
 
   const insets = useSafeAreaInsets();
   const { currentStore } = useStore();
@@ -50,9 +51,9 @@ export default function PrimaryImageSelectionModal({
   // Use the files hook to get images only
   const { files, uploadFile } = useFiles({ type: 'images' });
 
-  // Debug: Log files count and data
+  // Log files data for debugging
   useEffect(() => {
-    console.log('📁 PRIMARY MODAL: Files data:', {
+    log.debug('Primary image modal files data', 'PrimaryImageModal', {
       filesCount: files.length,
       files: files.map(f => ({
         id: f.id,
@@ -191,10 +192,10 @@ export default function PrimaryImageSelectionModal({
               style={{ width: '100%', height: '100%' }}
               resizeMode="cover"
               onLoad={() => {
-                console.log('✅ PRIMARY MODAL: Image loaded successfully:', media.url);
+                log.debug('Primary modal image loaded successfully', 'PrimaryImageModal', { url: media.url });
               }}
               onError={(error) => {
-                console.log('❌ PRIMARY MODAL: Image load error:', { url: media.url, error });
+                log.error('Primary modal image load error', 'PrimaryImageModal', { url: media.url, error });
               }}
             />
           </View>

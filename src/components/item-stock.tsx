@@ -5,6 +5,7 @@ import { MaterialIcons, Feather } from '@expo/vector-icons';
 import { useStore } from '../lib/store-context';
 import { db } from '../lib/instant';
 import { getItemStock, updateItemTotals, createInventoryAdjustment } from '../lib/inventory-setup';
+import { log } from '../lib/logger';
 import { id } from '@instantdb/react-native';
 
 interface Item {
@@ -255,7 +256,7 @@ export default function ItemStock({ item, onClose, onSave }: ItemStockProps) {
       setShowStockEditor(false);
       setSelectedLocation(null);
     } catch (error) {
-      console.error('Failed to update stock:', error);
+      log.error('Failed to update stock', 'ItemStock', { error: error instanceof Error ? error.message : 'Unknown error' });
       Alert.alert('Error', 'Failed to update stock level');
     } finally {
       setSaving(false);

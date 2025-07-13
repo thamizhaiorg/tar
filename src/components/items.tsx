@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { db, formatCurrency } from '../lib/instant';
 import { useStore } from '../lib/store-context';
-import { log, trackError } from '../lib/logger';
+import { log, trackError, PerformanceMonitor } from '../lib/logger';
 import PricingForm from './pricing-form';
 import { LoadingError, EmptyState } from './ui/error-boundary';
 
@@ -150,42 +150,44 @@ export default function ItemsScreen({ isGridView = false, onItemFormOpen, onItem
 
   // Back button handling is now managed by the main app
 
-  // Filter and search logic
+  // Filter and search logic - optimized with performance monitoring
   const filteredItems = useMemo(() => {
-    let filtered = items;
+    return PerformanceMonitor.measure('filter-items', () => {
+      let filtered = items;
 
-    // Apply search filter
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(item =>
-        (item.sku || '').toLowerCase().includes(query) ||
-        (item.option1 || '').toLowerCase().includes(query) ||
-        (item.option2 || '').toLowerCase().includes(query) ||
-        (item.option3 || '').toLowerCase().includes(query) ||
-        ((item.product && item.product[0] && item.product[0].title) ? item.product[0].title.toLowerCase() : '').includes(query)
-      );
-    }
+      // Apply search filter
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase();
+        filtered = filtered.filter(item =>
+          (item.sku || '').toLowerCase().includes(query) ||
+          (item.option1 || '').toLowerCase().includes(query) ||
+          (item.option2 || '').toLowerCase().includes(query) ||
+          (item.option3 || '').toLowerCase().includes(query) ||
+          ((item.product && item.product[0] && item.product[0].title) ? item.product[0].title.toLowerCase() : '').includes(query)
+        );
+      }
 
-    // Apply status filter
-    if (activeFilter !== 'All') {
-      filtered = filtered.filter(item => {
-        const status = item.trackQty === false ? 'Draft' : 'Active';
-        return status === activeFilter;
-      });
-    }
+      // Apply status filter
+      if (activeFilter !== 'All') {
+        filtered = filtered.filter(item => {
+          const status = item.trackQty === false ? 'Draft' : 'Active';
+          return status === activeFilter;
+        });
+      }
 
-    // Apply option value filter
-    if (selectedFilters.length > 0) {
-      filtered = filtered.filter(item =>
-        selectedFilters.some(filter =>
-          item.option1 === filter ||
-          item.option2 === filter ||
-          item.option3 === filter
-        )
-      );
-    }
+      // Apply option value filter
+      if (selectedFilters.length > 0) {
+        filtered = filtered.filter(item =>
+          selectedFilters.some(filter =>
+            item.option1 === filter ||
+            item.option2 === filter ||
+            item.option3 === filter
+          )
+        );
+      }
 
-    return filtered;
+      return filtered;
+    });
   }, [items, searchQuery, activeFilter, selectedFilters]);
 
   const handleItemSelect = useCallback((item: any) => {

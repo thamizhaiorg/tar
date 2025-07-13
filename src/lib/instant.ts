@@ -18,12 +18,46 @@ export const db = init({
 // Export types for use throughout the app
 export type { AppSchema } from '../../instant.schema';
 
+// Media item interface
+export interface MediaItem {
+  id: string;
+  url: string;
+  fileId: string;
+  name: string;
+  type: string;
+}
+
+// SEO interface
+export interface SEOData {
+  title?: string;
+  description?: string;
+  keywords?: string[];
+  slug?: string;
+}
+
+// Sale info interface
+export interface SaleInfo {
+  isOnSale?: boolean;
+  saleStartDate?: string;
+  saleEndDate?: string;
+  salePrice?: number;
+  saleType?: 'percentage' | 'fixed';
+}
+
+// Promo info interface
+export interface PromoInfo {
+  isPromoted?: boolean;
+  promoStartDate?: string;
+  promoEndDate?: string;
+  promoText?: string;
+}
+
 // Helper types for better TypeScript experience
 export type Product = {
   id: string;
   title: string;
   image?: string;
-  medias?: any;
+  medias?: MediaItem[];
   excerpt?: string;
   notes?: string;
   type?: string;
@@ -33,14 +67,14 @@ export type Product = {
   saleprice?: number;
   vendor?: string;
   brand?: string;
-  options?: any;
-  modifiers?: any;
-  metafields?: any;
-  saleinfo?: any;
-  stores?: any;
+  options?: Record<string, unknown>;
+  modifiers?: Record<string, unknown>;
+  metafields?: Record<string, unknown>;
+  saleinfo?: SaleInfo;
+  stores?: string[];
   pos?: boolean;
   website?: boolean;
-  seo?: any;
+  seo?: SEOData;
   tags?: string | string[]; // Database stores as string, UI uses array
   cost?: number;
   qrcode?: string;
@@ -49,10 +83,10 @@ export type Product = {
   updatedAt?: number | string;
   publishAt?: number | string;
   publish?: boolean;
-  promoinfo?: any;
+  promoinfo?: PromoInfo;
   featured?: boolean;
-  relproducts?: any;
-  sellproducts?: any;
+  relproducts?: string[];
+  sellproducts?: string[];
 };
 
 export type Collection = {
@@ -65,6 +99,27 @@ export type Collection = {
   updatedAt: number | string;
   products?: Product[];
 };
+
+export interface Item {
+  id: string;
+  storeId: string;
+  productId: string;
+  sku: string;
+  barcode?: string;
+  title?: string;
+  price?: number;
+  cost?: number;
+  weight?: number;
+  dimensions?: string;
+  trackQty?: boolean;
+  allowPreorder?: boolean;
+  stock?: number;
+  lowStockLevel?: number;
+  options?: Record<string, string>;
+  metafields?: Record<string, unknown>;
+  createdAt: string;
+  updatedAt?: string;
+}
 
 // Utility function to generate current timestamp
 export const getCurrentTimestamp = () => Date.now();

@@ -4,7 +4,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { id } from '@instantdb/react-native';
 import { MaterialIcons, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
-
 import Input from './ui/Input';
 import QuantitySelector from './ui/qty';
 import FileUpload from './ui/file-upload';
@@ -920,7 +919,7 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
       setShowOptionSetSelector(false);
 
     } catch (error) {
-      console.error('Failed to generate items:', error);
+      log.error('Failed to generate items', 'ProductForm', { error: error instanceof Error ? error.message : 'Unknown error' });
       Alert.alert('Error', 'Failed to generate items. Please try again.');
     }
   };
@@ -1028,13 +1027,13 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
           })
         ]);
 
-        console.log(`Created location stock for single item: ${itemId}`);
+        log.info('Created location stock for single item', 'ProdForm', { itemId });
       } catch (error) {
-        console.error('Failed to create default location stock for single item:', itemId, error);
+        trackError(error as Error, 'ProdForm', { operation: 'createLocationStock', itemId });
         // Don't fail item creation if location stock creation fails
       }
     } catch (error) {
-      console.error('Failed to generate single item:', error);
+      trackError(error as Error, 'ProdForm', { operation: 'generateSingleItem' });
     }
   };
 

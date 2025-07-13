@@ -2,6 +2,7 @@ import { useMemo, useEffect } from 'react';
 import { db } from '../lib/instant';
 import { useStore } from '../lib/store-context';
 import { fileManager, FileRecord } from '../lib/file-manager';
+import { log } from '../lib/logger';
 
 export interface UseFilesOptions {
   reference?: string;
@@ -30,7 +31,7 @@ export function useFiles(options: UseFilesOptions = {}): UseFilesResult {
     }
   } : {};
 
-  console.log('🔍 useFiles HOOK: Database query:', {
+  log.debug('useFiles hook database query', 'useFiles', {
     currentStoreId: currentStore?.id,
     query,
     hasCurrentStore: !!currentStore
@@ -40,9 +41,9 @@ export function useFiles(options: UseFilesOptions = {}): UseFilesResult {
 
   const allFiles = filesData?.files || [];
 
-  // Add comprehensive logging
+  // Log files data for debugging
   useEffect(() => {
-    console.log('🗂️ useFiles HOOK: Query result:', {
+    log.debug('useFiles hook query result', 'useFiles', {
       currentStoreId: currentStore?.id,
       filesData,
       allFilesCount: allFiles.length,
@@ -63,7 +64,7 @@ export function useFiles(options: UseFilesOptions = {}): UseFilesResult {
     // Log specific details about image files
     const imageFiles = allFiles.filter(f => f.type.startsWith('image/'));
     if (imageFiles.length > 0) {
-      console.log('🖼️ useFiles HOOK: Image files found:', {
+      log.debug('Image files found', 'useFiles', {
         imageCount: imageFiles.length,
         imageFiles: imageFiles.map(f => ({
           id: f.id,
@@ -73,7 +74,7 @@ export function useFiles(options: UseFilesOptions = {}): UseFilesResult {
         }))
       });
     } else {
-      console.log('❌ useFiles HOOK: No image files found');
+      log.debug('No image files found', 'useFiles');
     }
   }, [allFiles.length, currentStore?.id, isLoading, error, options]);
 
@@ -239,9 +240,9 @@ export function useFileSelection() {
 
   const files = filesData?.files || [];
 
-  // Add comprehensive logging for file selection
+  // Log file selection data for debugging
   useEffect(() => {
-    console.log('🗂️ useFileSelection HOOK: Query result:', {
+    log.debug('useFileSelection hook query result', 'useFileSelection', {
       currentStoreId: currentStore?.id,
       filesData,
       filesCount: files.length,
@@ -261,7 +262,7 @@ export function useFileSelection() {
     // Log specific details about image files
     const imageFiles = files.filter(f => f.type.startsWith('image/'));
     if (imageFiles.length > 0) {
-      console.log('🖼️ useFileSelection HOOK: Image files found:', {
+      log.debug('Image files found in file selection', 'useFileSelection', {
         imageCount: imageFiles.length,
         imageFiles: imageFiles.map(f => ({
           id: f.id,
@@ -271,7 +272,7 @@ export function useFileSelection() {
         }))
       });
     } else {
-      console.log('❌ useFileSelection HOOK: No image files found');
+      log.debug('No image files found in file selection', 'useFileSelection');
     }
   }, [files.length, currentStore?.id, isLoading, error]);
 
