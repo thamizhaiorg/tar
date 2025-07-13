@@ -28,14 +28,18 @@ interface PrimaryImageSelectionModalProps {
   onClose: () => void;
   onSelect: (media: MediaItem) => void;
   title?: string;
+  reference?: string;
 }
 
 export default function PrimaryImageSelectionModal({
   visible,
   onClose,
   onSelect,
-  title = 'Select Primary Image'
+  title = 'Select Primary Image',
+  reference
 }: PrimaryImageSelectionModalProps) {
+  console.log('📱 PRIMARY IMAGE MODAL: Component rendered', { visible, reference });
+
   const insets = useSafeAreaInsets();
   const { currentStore } = useStore();
   const { user } = db.useAuth();
@@ -46,10 +50,20 @@ export default function PrimaryImageSelectionModal({
   // Use the files hook to get images only
   const { files, uploadFile } = useFiles({ type: 'images' });
 
-  // Debug: Log files count
+  // Debug: Log files count and data
   useEffect(() => {
-    console.log('📁 PRIMARY MODAL: Files count:', files.length);
-  }, [files.length]);
+    console.log('📁 PRIMARY MODAL: Files data:', {
+      filesCount: files.length,
+      files: files.map(f => ({
+        id: f.id,
+        title: f.title,
+        url: f.url,
+        type: f.type,
+        size: f.size
+      })),
+      visible
+    });
+  }, [files.length, files, visible]);
 
   // Handle native back button
   useEffect(() => {
@@ -66,13 +80,20 @@ export default function PrimaryImageSelectionModal({
 
   // Filter images based on search query
   const filteredImages = useMemo(() => {
-    if (!searchQuery.trim()) return files;
-    
-    const searchQuery_lower = searchQuery.toLowerCase();
-    return files.filter(file => 
-      file.title.toLowerCase().includes(searchQuery_lower) ||
-      file.alt?.toLowerCase().includes(searchQuery_lower)
-    );
+    const result = !searchQuery.trim() ? files : files.filter(file => {
+      const searchQuery_lower = searchQuery.toLowerCase();
+      return file.title.toLowerCase().includes(searchQuery_lower) ||
+             file.alt?.toLowerCase().includes(searchQuery_lower);
+    });
+
+    console.log('🔍 PRIMARY MODAL: Filtered images:', {
+      searchQuery,
+      originalCount: files.length,
+      filteredCount: result.length,
+      filteredImages: result.map(f => ({ id: f.id, title: f.title, url: f.url, type: f.type }))
+    });
+
+    return result;
   }, [files, searchQuery]);
 
   const handleImageSelect = (media: MediaItem) => {
@@ -102,10 +123,25 @@ export default function PrimaryImageSelectionModal({
 
       if (!result.canceled && result.assets.length > 0) {
         setUploading(true);
-        
+
         const asset = result.assets[0];
-        const uploadResult = await uploadFile(asset, {
-          title: `primary_image_${Date.now()}`,
+
+        // Generate filename with product name if available
+        const productName = reference?.includes('product-') ?
+          reference.split('product-')[1]?.replace(/[^a-zA-Z0-9]/g, '') || 'product' :
+          'primary';
+        const randomId = Math.floor(Math.random() * 1000000);
+        const fileName = `${productName}_image_${randomId}`;
+
+        // Ensure correct file type is set
+        const fileWithCorrectType = {
+          ...asset,
+          type: asset.type === 'image' ? 'image/jpeg' : (asset.type || 'image/jpeg'),
+          mimeType: asset.type === 'image' ? 'image/jpeg' : (asset.type || 'image/jpeg')
+        };
+
+        const uploadResult = await uploadFile(fileWithCorrectType, {
+          title: fileName,
           alt: 'Primary image'
         });
 
@@ -135,6 +171,13 @@ export default function PrimaryImageSelectionModal({
   };
 
   const renderImageItem = ({ item: media }: { item: MediaItem }) => {
+    console.log('🖼️ PRIMARY MODAL: Rendering image item:', {
+      id: media.id,
+      title: media.title,
+      url: media.url,
+      type: media.type
+    });
+
     return (
       <TouchableOpacity
         onPress={() => handleImageSelect(media)}
@@ -147,6 +190,12 @@ export default function PrimaryImageSelectionModal({
               url={media.url}
               style={{ width: '100%', height: '100%' }}
               resizeMode="cover"
+              onLoad={() => {
+                console.log('✅ PRIMARY MODAL: Image loaded successfully:', media.url);
+              }}
+              onError={(error) => {
+                console.log('❌ PRIMARY MODAL: Image load error:', { url: media.url, error });
+              }}
             />
           </View>
           <View className="p-3">

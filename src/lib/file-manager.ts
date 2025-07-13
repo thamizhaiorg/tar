@@ -34,20 +34,37 @@ export class FileManager {
   
   // Create a new file record in the database
   async createFileRecord(
-    file: any, 
-    uploadResult: any, 
+    file: any,
+    uploadResult: any,
     options: FileUploadOptions
   ): Promise<FileRecord> {
     const fileId = id();
     const handle = r2Service.generateFileHandle(file.name, options.userId);
-    
+
+    console.log('📝 FileManager: Creating file record:', {
+      fileId,
+      fileName: file.name,
+      uploadResultUrl: uploadResult.url,
+      uploadResultKey: uploadResult.key,
+      handle,
+      options
+    });
+
+    // Fix file type - ensure proper MIME type
+    let fileType = file.type || file.mimeType || 'application/octet-stream';
+    if (fileType === 'image') {
+      fileType = 'image/jpeg'; // Default to JPEG for generic "image" type
+    } else if (fileType === 'video') {
+      fileType = 'video/mp4'; // Default to MP4 for generic "video" type
+    }
+
     const fileRecord: FileRecord = {
       id: fileId,
       title: options.title || file.name,
       url: uploadResult.url,
       handle,
       alt: options.alt || '',
-      type: file.type || file.mimeType || 'application/octet-stream',
+      type: fileType,
       size: file.size || 0,
       reference: options.reference || '',
       dateAdded: getCurrentTimestamp(),
@@ -55,10 +72,13 @@ export class FileManager {
       ...(options.userId && { userId: options.userId })
     };
 
+    console.log('📝 FileManager: File record to be saved:', fileRecord);
+
     await db.transact([
       db.tx.files[fileId].update(fileRecord)
     ]);
 
+    console.log('✅ FileManager: File record saved successfully:', fileId);
     log.info('File record created', 'FileManager', { fileId, handle });
     return fileRecord;
   }

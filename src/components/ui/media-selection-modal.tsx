@@ -29,6 +29,7 @@ interface MediaSelectionModalProps {
   onSelect: (media: MediaItem[]) => void;
   title?: string;
   selectedMedia?: MediaItem[];
+  reference?: string;
 }
 
 export default function MediaSelectionModal({
@@ -36,8 +37,11 @@ export default function MediaSelectionModal({
   onClose,
   onSelect,
   title = 'Select Medias',
-  selectedMedia = []
+  selectedMedia = [],
+  reference
 }: MediaSelectionModalProps) {
+  console.log('📱 MEDIA MODAL: Component rendered', { visible, reference });
+
   const insets = useSafeAreaInsets();
   const { currentStore } = useStore();
   const { user } = db.useAuth();
@@ -49,10 +53,20 @@ export default function MediaSelectionModal({
   // Use the files hook to get images only
   const { files, uploadFile } = useFiles({ type: 'images' });
 
-  // Debug: Log files count
+  // Debug: Log files count and data
   useEffect(() => {
-    console.log('📁 MEDIA MODAL: Files count:', files.length);
-  }, [files.length]);
+    console.log('📁 MEDIA MODAL: Files data:', {
+      filesCount: files.length,
+      files: files.map(f => ({
+        id: f.id,
+        title: f.title,
+        url: f.url,
+        type: f.type,
+        size: f.size
+      })),
+      visible
+    });
+  }, [files.length, files, visible]);
 
   // Handle native back button
   useEffect(() => {
@@ -76,13 +90,20 @@ export default function MediaSelectionModal({
 
   // Filter images based on search query
   const filteredImages = useMemo(() => {
-    if (!searchQuery.trim()) return files;
-    
-    const searchQuery_lower = searchQuery.toLowerCase();
-    return files.filter(file => 
-      file.title.toLowerCase().includes(searchQuery_lower) ||
-      file.alt?.toLowerCase().includes(searchQuery_lower)
-    );
+    const result = !searchQuery.trim() ? files : files.filter(file => {
+      const searchQuery_lower = searchQuery.toLowerCase();
+      return file.title.toLowerCase().includes(searchQuery_lower) ||
+             file.alt?.toLowerCase().includes(searchQuery_lower);
+    });
+
+    console.log('🔍 MEDIA MODAL: Filtered images:', {
+      searchQuery,
+      originalCount: files.length,
+      filteredCount: result.length,
+      filteredImages: result.map(f => ({ id: f.id, title: f.title, url: f.url, type: f.type }))
+    });
+
+    return result;
   }, [files, searchQuery]);
 
   const handleMediaToggle = (media: MediaItem) => {
@@ -129,16 +150,24 @@ export default function MediaSelectionModal({
       });
 
       if (!result.canceled && result.assets) {
-        const uploadPromises = result.assets.map(async (asset) => {
+        const uploadPromises = result.assets.map(async (asset, index) => {
+          // Generate filename with product name if available
+          const productName = reference?.includes('product-') ?
+            reference.split('product-')[1]?.replace(/[^a-zA-Z0-9]/g, '') || 'product' :
+            'media';
+          const randomId = Math.floor(Math.random() * 1000000);
+          const fileName = `${productName}_media_${randomId}_${index + 1}`;
+
           const file = {
             uri: asset.uri,
-            name: asset.fileName || `image_${Date.now()}.jpg`,
-            type: asset.type || 'image/jpeg',
+            name: asset.fileName || `${fileName}.jpg`,
+            type: asset.type === 'image' ? 'image/jpeg' : (asset.type || 'image/jpeg'),
+            mimeType: asset.type === 'image' ? 'image/jpeg' : (asset.type || 'image/jpeg'),
             size: asset.fileSize || 0
           };
 
           return await uploadFile(file, {
-            title: file.name,
+            title: fileName,
             alt: ''
           });
         });
@@ -178,6 +207,14 @@ export default function MediaSelectionModal({
   const renderMediaItem = ({ item: media }: { item: MediaItem }) => {
     const isSelected = selectedMediaIds.has(media.id);
 
+    console.log('🖼️ MEDIA MODAL: Rendering media item:', {
+      id: media.id,
+      title: media.title,
+      url: media.url,
+      type: media.type,
+      isSelected
+    });
+
     return (
       <TouchableOpacity
         onPress={() => handleMediaToggle(media)}
@@ -192,6 +229,12 @@ export default function MediaSelectionModal({
               url={media.url}
               style={{ width: '100%', height: '100%' }}
               resizeMode="cover"
+              onLoad={() => {
+                console.log('✅ MEDIA MODAL: Image loaded successfully:', media.url);
+              }}
+              onError={(error) => {
+                console.log('❌ MEDIA MODAL: Image load error:', { url: media.url, error });
+              }}
             />
           </View>
           <View className="p-3">
@@ -200,12 +243,12 @@ export default function MediaSelectionModal({
             </Text>
           </View>
         </View>
-        
+
         {/* Selection Checkbox */}
         <View className="absolute top-2 right-2">
           <View className={`w-6 h-6 rounded border-2 items-center justify-center ${
-            isSelected 
-              ? 'bg-blue-500 border-blue-500' 
+            isSelected
+              ? 'bg-blue-500 border-blue-500'
               : 'bg-white border-gray-300'
           }`}>
             {isSelected && (

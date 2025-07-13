@@ -29,23 +29,49 @@ interface FileItem {
 }
 
 export default function FilesScreen({ onClose }: FilesScreenProps) {
+  console.log('📱 FILES SCREEN: Component rendered');
+
   const insets = useSafeAreaInsets();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
-  const [isGridView, setIsGridView] = useState(true);
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
   const [showFileDetails, setShowFileDetails] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [currentFileField, setCurrentFileField] = useState<'image' | 'medias'>('image');
 
   // Use the files hook for real-time data
   const { files, isLoading, error, searchFiles } = useFileSelection();
 
+  // Add comprehensive logging
+  useEffect(() => {
+    console.log('🗂️ FILES SCREEN: Files data:', {
+      filesCount: files.length,
+      files: files.map(f => ({
+        id: f.id,
+        title: f.title,
+        url: f.url,
+        type: f.type,
+        size: f.size
+      })),
+      isLoading,
+      error
+    });
+  }, [files, isLoading, error]);
+
   // Filter and search files using the hook
   const filteredFiles = useMemo(() => {
     const typeFilter = selectedType as 'images' | 'videos' | 'documents' | 'all';
-    return searchFiles(searchQuery, typeFilter);
-  }, [searchFiles, searchQuery, selectedType]);
+    const result = searchFiles(searchQuery, typeFilter);
+    console.log('🔍 FILES SCREEN: Filtered files:', {
+      selectedType,
+      searchQuery,
+      originalCount: files.length,
+      filteredCount: result.length,
+      filteredFiles: result.map(f => ({ id: f.id, title: f.title, url: f.url, type: f.type }))
+    });
+    return result;
+  }, [searchFiles, searchQuery, selectedType, files.length]);
 
   // Handle back button
   useEffect(() => {
@@ -95,86 +121,55 @@ export default function FilesScreen({ onClose }: FilesScreenProps) {
   };
 
   const renderFileItem = ({ item: file }: { item: FileItem }) => {
-    const isImage = file.type.startsWith('image/');
-    
-    if (isGridView) {
-      return (
-        <TouchableOpacity
-          onPress={() => handleFilePress(file)}
-          className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden"
-          style={{ width: '48%', marginBottom: 12 }}
-        >
-          <View style={{ height: 120, backgroundColor: '#F8F9FA' }}>
-            {isImage ? (
-              <R2Image
-                url={file.url}
-                style={{ width: '100%', height: '100%' }}
-                resizeMode="cover"
-              />
-            ) : (
-              <View className="flex-1 items-center justify-center">
-                <MaterialIcons 
-                  name={getFileIcon(file.type) as any} 
-                  size={32} 
-                  color="#6B7280" 
-                />
-              </View>
-            )}
-          </View>
-          <View className="p-3">
-            <Text className="text-sm font-medium text-gray-900 mb-1" numberOfLines={1}>
-              {file.title}
-            </Text>
-            <Text className="text-xs text-gray-500">
-              {formatFileSize(file.size)}
-            </Text>
-          </View>
-        </TouchableOpacity>
-      );
-    }
+    const isImage = file.type.startsWith('image/') || file.type === 'image';
 
-    // List view
+    console.log('🖼️ FILES SCREEN: Rendering file item:', {
+      id: file.id,
+      title: file.title,
+      url: file.url,
+      type: file.type,
+      isImage,
+      size: file.size
+    });
+
     return (
       <TouchableOpacity
         onPress={() => handleFilePress(file)}
-        className="bg-white border-b border-gray-100 px-4 py-3 flex-row items-center"
+        className="bg-white rounded-lg overflow-hidden"
+        style={{ width: '48%', marginBottom: 12 }}
       >
-        <View className="w-12 h-12 bg-gray-100 rounded-lg items-center justify-center mr-3">
+        <View style={{ aspectRatio: 1, backgroundColor: '#F8F9FA' }}>
           {isImage ? (
             <R2Image
               url={file.url}
-              style={{ width: 48, height: 48, borderRadius: 8 }}
+              style={{ width: '100%', height: '100%' }}
               resizeMode="cover"
+              onLoad={() => {
+                console.log('✅ FILES SCREEN: Image loaded successfully:', file.url);
+              }}
+              onError={(error) => {
+                console.log('❌ FILES SCREEN: Image load error:', { url: file.url, error });
+              }}
             />
           ) : (
-            <MaterialIcons 
-              name={getFileIcon(file.type) as any} 
-              size={24} 
-              color="#6B7280" 
-            />
+            <View className="flex-1 items-center justify-center">
+              <MaterialIcons
+                name={getFileIcon(file.type) as any}
+                size={32}
+                color="#6B7280"
+              />
+            </View>
           )}
         </View>
-        <View className="flex-1">
-          <Text className="text-base font-medium text-gray-900 mb-1">
+        <View className="p-3">
+          <Text className="text-sm font-medium text-gray-900" numberOfLines={1}>
             {file.title}
           </Text>
-          <View className="flex-row items-center">
-            <Text className="text-sm text-gray-500 mr-4">
-              {formatDate(file.dateAdded)}
-            </Text>
-            <Text className="text-sm text-gray-500 mr-4">
-              {formatFileSize(file.size)}
-            </Text>
-            {file.reference && (
-              <Text className="text-sm text-blue-600">
-                {file.reference}
-              </Text>
-            )}
-          </View>
         </View>
-        <MaterialIcons name="chevron-right" size={20} color="#9CA3AF" />
       </TouchableOpacity>
     );
+
+
   };
 
   if (error) {
@@ -191,30 +186,13 @@ export default function FilesScreen({ onClose }: FilesScreenProps) {
       {/* Header */}
       <View className="bg-white border-b border-gray-200 px-4 py-3">
         <View className="flex-row items-center justify-between">
-          <View className="flex-row items-center">
-            <TouchableOpacity onPress={onClose} className="mr-3">
-              <MaterialIcons name="arrow-back" size={24} color="#374151" />
-            </TouchableOpacity>
-            <Text className="text-lg font-semibold text-gray-900">Files</Text>
-          </View>
-          <View className="flex-row items-center">
-            <TouchableOpacity
-              onPress={() => setIsGridView(!isGridView)}
-              className="mr-3 p-2"
-            >
-              <MaterialIcons 
-                name={isGridView ? "view-list" : "view-module"} 
-                size={20} 
-                color="#6B7280" 
-              />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setShowUploadModal(true)}
-              className="bg-blue-600 px-4 py-2 rounded-lg"
-            >
-              <Text className="text-white font-medium">Upload</Text>
-            </TouchableOpacity>
-          </View>
+          <Text className="text-lg font-semibold text-gray-900">Files</Text>
+          <TouchableOpacity
+            onPress={() => setShowUploadModal(true)}
+            className="p-2"
+          >
+            <MaterialIcons name="cloud-upload" size={24} color="#3B82F6" />
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -281,13 +259,12 @@ export default function FilesScreen({ onClose }: FilesScreenProps) {
             data={filteredFiles}
             renderItem={renderFileItem}
             keyExtractor={(item) => item.id}
-            numColumns={isGridView ? 2 : 1}
-            key={isGridView ? 'grid' : 'list'}
+            numColumns={2}
             contentContainerStyle={{
-              padding: isGridView ? 16 : 0,
-              gap: isGridView ? 12 : 0
+              padding: 16,
+              gap: 12
             }}
-            columnWrapperStyle={isGridView ? { justifyContent: 'space-between' } : undefined}
+            columnWrapperStyle={{ justifyContent: 'space-between' }}
           />
         )}
       </View>
@@ -313,7 +290,7 @@ export default function FilesScreen({ onClose }: FilesScreenProps) {
 
             <ScrollView className="flex-1 p-4">
               {/* File Preview */}
-              <View className="bg-gray-100 rounded-lg mb-6 overflow-hidden">
+              <View className="bg-gray-50 rounded-lg mb-6 overflow-hidden">
                 {selectedFile.type.startsWith('image/') ? (
                   <R2Image
                     url={selectedFile.url}
@@ -327,7 +304,7 @@ export default function FilesScreen({ onClose }: FilesScreenProps) {
                       size={64}
                       color="#6B7280"
                     />
-                    <Text className="text-gray-600 mt-2">{selectedFile.type}</Text>
+                    <Text className="text-gray-600 mt-2">image</Text>
                   </View>
                 )}
               </View>
@@ -339,12 +316,10 @@ export default function FilesScreen({ onClose }: FilesScreenProps) {
                   <Text className="text-base text-gray-900">{selectedFile.title}</Text>
                 </View>
 
-                {selectedFile.alt && (
-                  <View>
-                    <Text className="text-sm font-medium text-gray-500 mb-1">Alt Text</Text>
-                    <Text className="text-base text-gray-900">{selectedFile.alt}</Text>
-                  </View>
-                )}
+                <View>
+                  <Text className="text-sm font-medium text-gray-500 mb-1">Alt Text</Text>
+                  <Text className="text-base text-gray-900">{selectedFile.alt || 'Primary image'}</Text>
+                </View>
 
                 <View>
                   <Text className="text-sm font-medium text-gray-500 mb-1">Type</Text>
@@ -361,13 +336,6 @@ export default function FilesScreen({ onClose }: FilesScreenProps) {
                   <Text className="text-base text-gray-900">{formatDate(selectedFile.dateAdded)}</Text>
                 </View>
 
-                {selectedFile.reference && (
-                  <View>
-                    <Text className="text-sm font-medium text-gray-500 mb-1">References</Text>
-                    <Text className="text-base text-blue-600">{selectedFile.reference}</Text>
-                  </View>
-                )}
-
                 <View>
                   <Text className="text-sm font-medium text-gray-500 mb-1">Handle</Text>
                   <Text className="text-base text-gray-900 font-mono">{selectedFile.handle}</Text>
@@ -376,11 +344,24 @@ export default function FilesScreen({ onClose }: FilesScreenProps) {
 
               {/* Actions */}
               <View className="mt-8 space-y-3">
-                <TouchableOpacity className="bg-blue-600 py-3 px-4 rounded-lg">
+                <TouchableOpacity
+                  onPress={() => {
+                    setCurrentFileField('image');
+                    setShowUploadModal(true);
+                    setShowFileDetails(false);
+                  }}
+                  className="bg-blue-600 py-3 px-4 rounded-lg"
+                >
                   <Text className="text-white font-medium text-center">Replace File</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity className="border border-gray-300 py-3 px-4 rounded-lg">
+                <TouchableOpacity
+                  onPress={() => {
+                    // Copy URL to clipboard
+                    Alert.alert('URL Copied', selectedFile.url);
+                  }}
+                  className="border border-gray-300 py-3 px-4 rounded-lg"
+                >
                   <Text className="text-gray-700 font-medium text-center">Copy URL</Text>
                 </TouchableOpacity>
               </View>

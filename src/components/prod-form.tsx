@@ -11,6 +11,13 @@ import FileUpload from './ui/file-upload';
 import MediaSelectionModal from './ui/media-selection-modal';
 import PrimaryImageSelectionModal from './ui/primary-image-selection-modal';
 
+interface MediaItem {
+  url: string;
+  fileId: string;
+  name: string;
+  type: string;
+}
+
 import R2Image from './ui/r2-image';
 import { db, getCurrentTimestamp } from '../lib/instant';
 import { useStore } from '../lib/store-context';
@@ -194,6 +201,7 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
   const [notificationMessage, setNotificationMessage] = useState('');
   const [showMediaSelection, setShowMediaSelection] = useState(false);
   const [showPrimaryImageSelection, setShowPrimaryImageSelection] = useState(false);
+  const [currentFileField, setCurrentFileField] = useState<'image' | 'medias'>('image');
 
 
 
@@ -2880,6 +2888,7 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
         onClose={() => setShowPrimaryImageSelection(false)}
         onSelect={handlePrimaryImageSelectionComplete}
         title="Select Primary Image"
+        reference={`product-${formData.title || 'new'}`}
       />
 
       {/* Media Selection Modal */}
@@ -2888,6 +2897,7 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
         onClose={() => setShowMediaSelection(false)}
         onSelect={handleMediaSelectionComplete}
         title="Select Medias"
+        reference={`product-${formData.title || 'new'}`}
       />
 
     </View>

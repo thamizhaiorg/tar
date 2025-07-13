@@ -25,10 +25,14 @@ class R2Service {
   }
 
   private initializeClient() {
+    console.log('🔧 R2Service: Initializing client...');
+
     if (!validateR2Config()) {
-      console.error('R2 configuration is incomplete');
+      console.error('❌ R2Service: R2 configuration is incomplete');
       return;
     }
+
+    console.log('✅ R2Service: Configuration validated, creating S3Client');
 
     this.client = new S3Client({
       region: r2Config.region,
@@ -39,6 +43,8 @@ class R2Service {
       },
       forcePathStyle: true, // Required for R2
     });
+
+    console.log('✅ R2Service: S3Client created successfully');
   }
 
   async uploadFile(file: MediaFile, prefix: string = 'media'): Promise<UploadResult> {
@@ -112,6 +118,13 @@ class R2Service {
 
         // Return success with public URL
         const url = getPublicUrl(key);
+        console.log('✅ R2Service: File uploaded successfully:', {
+          key,
+          url,
+          fileName: file.name,
+          fileType: file.type,
+          bucketName: r2Config.bucketName
+        });
         log.info(`File uploaded successfully: ${key}`, 'R2Service', { url });
         return { success: true, url, key };
       });
@@ -186,9 +199,13 @@ class R2Service {
   // Extract key from URL
   extractKeyFromUrl(url: string): string | null {
     try {
+      console.log('🔑 R2Service: Extracting key from URL:', url);
       const urlObj = new URL(url);
-      return urlObj.pathname.substring(1); // Remove leading slash
-    } catch {
+      const key = urlObj.pathname.substring(1); // Remove leading slash
+      console.log('🔑 R2Service: Extracted key:', key);
+      return key;
+    } catch (error) {
+      console.log('❌ R2Service: Failed to extract key from URL:', { url, error });
       return null;
     }
   }
@@ -230,7 +247,15 @@ class R2Service {
     category: string,
     reference?: string
   ): Promise<UploadResult> {
+    console.log('📤 R2Service: uploadFileWithStructuredPath called:', {
+      fileName: file.name,
+      userId,
+      category,
+      reference
+    });
+
     const structuredPath = this.generateStructuredPath(userId, category, file.name, reference);
+    console.log('📤 R2Service: Generated structured path:', structuredPath);
 
     // Use the structured path as the key directly
     return this.uploadFileWithCustomKey(file, structuredPath);
@@ -238,11 +263,21 @@ class R2Service {
 
   // Upload file with custom key (internal method)
   private async uploadFileWithCustomKey(file: MediaFile, key: string): Promise<UploadResult> {
+    console.log('📤 R2Service: uploadFileWithCustomKey called:', {
+      fileName: file.name,
+      key,
+      fileUri: file.uri,
+      fileType: file.type,
+      fileSize: file.size
+    });
+
     if (!this.client) {
+      console.error('❌ R2Service: R2 client not initialized');
       log.error('R2 client not initialized', 'R2Service');
       return { success: false, error: 'R2 client not initialized' };
     }
 
+    console.log('📤 R2Service: Starting file upload with custom key:', key);
     log.info(`Starting file upload with custom key: ${key}`, 'R2Service', {
       size: file.size,
       type: file.type
@@ -305,8 +340,10 @@ class R2Service {
 
   // Generate signed URL for reading files (for private buckets)
   async getSignedUrl(key: string, expiresIn: number = 3600): Promise<string | null> {
+    console.log('🔐 R2Service: Generating signed URL for key:', { key, expiresIn });
+
     if (!this.client) {
-      console.error('R2 client not initialized');
+      console.error('❌ R2Service: R2 client not initialized');
       return null;
     }
 
@@ -316,10 +353,13 @@ class R2Service {
         Key: key,
       });
 
+      console.log('🔐 R2Service: Creating GetObjectCommand:', { bucket: r2Config.bucketName, key });
+
       const signedUrl = await getSignedUrl(this.client, command, { expiresIn });
+      console.log('✅ R2Service: Generated signed URL:', signedUrl);
       return signedUrl;
     } catch (error) {
-      console.error('Failed to generate signed URL:', error);
+      console.error('❌ R2Service: Failed to generate signed URL:', { key, error });
       return null;
     }
   }
