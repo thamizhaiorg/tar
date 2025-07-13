@@ -7,8 +7,11 @@ import * as ImagePicker from 'expo-image-picker';
 import { db, getCurrentTimestamp } from '../lib/instant';
 import { r2Service } from '../lib/r2-service';
 import R2Image from './ui/r2-image';
+import FileUpload from './ui/file-upload';
+import FileSelectionModal from './ui/file-selection-modal';
 import ProductSelect from './product-select';
 import { useStore } from '../lib/store-context';
+import { fileManager } from '../lib/file-manager';
 
 interface CollectionFormScreenProps {
   collection?: any;
@@ -49,6 +52,7 @@ export default function CollectionFormScreen({ collection, onClose, onSave }: Co
   const [showUnsavedChangesModal, setShowUnsavedChangesModal] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
   const [showProductSelect, setShowProductSelect] = useState(false);
+  const [showFileSelection, setShowFileSelection] = useState(false);
 
   // Handle Android back button
   useEffect(() => {
@@ -70,10 +74,24 @@ export default function CollectionFormScreen({ collection, onClose, onSave }: Co
     setHasChanges(true);
   };
 
+  // New file upload handlers
+  const handleFileUploadComplete = (fileId: string, fileData: any) => {
+    updateField('image', fileData.url);
+    updateField('imageFileId', fileId); // Store file ID for reference
+  };
+
+  const handleFileSelectionComplete = (files: any[]) => {
+    if (files.length > 0) {
+      const file = files[0];
+      updateField('image', file.url);
+      updateField('imageFileId', file.id);
+    }
+  };
+
   const handleImageUpload = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: 'Images' as any,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
@@ -288,81 +306,40 @@ export default function CollectionFormScreen({ collection, onClose, onSave }: Co
             borderBottomWidth: 1,
             borderColor: '#E5E7EB',
           }}>
-            <Text style={{
-              fontSize: 16,
-              fontWeight: '500',
-              color: '#111827',
-              marginBottom: 12,
-            }}>
-              Collection Image
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <Text style={{
+                fontSize: 16,
+                fontWeight: '500',
+                color: '#111827',
+              }}>
+                Collection Image
+              </Text>
+              <TouchableOpacity
+                onPress={() => setShowFileSelection(true)}
+                style={{
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  backgroundColor: '#F3F4F6',
+                  borderRadius: 6,
+                }}
+              >
+                <Text style={{ fontSize: 12, color: '#6B7280' }}>Choose from Files</Text>
+              </TouchableOpacity>
+            </View>
 
-            <TouchableOpacity
-              onPress={handleImageUpload}
-              disabled={imageUploading}
-              style={{
-                width: 120,
-                height: 120,
-                borderRadius: 8,
-                borderWidth: 2,
-                borderColor: '#E5E7EB',
-                borderStyle: 'dashed',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: '#F9FAFB',
-                overflow: 'hidden',
+            <FileUpload
+              onUploadComplete={handleFileUploadComplete}
+              onUploadStart={() => setImageUploading(true)}
+              onUploadError={(error) => {
+                setImageUploading(false);
+                Alert.alert('Upload Error', error);
               }}
-            >
-              {formData.image ? (
-                <View style={{ width: '100%', height: '100%', position: 'relative' }}>
-                  <R2Image
-                    url={formData.image}
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      borderRadius: 6,
-                    }}
-                    resizeMode="cover"
-                    onError={() => {
-                      console.log('Image failed to load:', formData.image);
-                    }}
-                  />
-                  {/* Remove image button */}
-                  <TouchableOpacity
-                    onPress={() => updateField('image', '')}
-                    style={{
-                      position: 'absolute',
-                      top: 4,
-                      right: 4,
-                      width: 20,
-                      height: 20,
-                      borderRadius: 10,
-                      backgroundColor: 'rgba(0,0,0,0.6)',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <MaterialIcons name="close" size={12} color="#fff" />
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <View style={{ alignItems: 'center' }}>
-                  <MaterialIcons
-                    name={imageUploading ? "hourglass-empty" : "add-a-photo"}
-                    size={24}
-                    color="#9CA3AF"
-                  />
-                  <Text style={{
-                    fontSize: 12,
-                    color: '#9CA3AF',
-                    marginTop: 4,
-                    textAlign: 'center',
-                  }}>
-                    {imageUploading ? 'Uploading...' : 'Add Image'}
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
+              acceptedTypes="images"
+              reference={`collection-${collection?.id || 'new'}`}
+              existingFile={formData.image ? { url: formData.image, type: 'image/jpeg' } : undefined}
+              disabled={imageUploading}
+              style={{ width: 120, height: 120 }}
+            />
           </View>
 
           {/* Status Toggles */}
@@ -614,6 +591,16 @@ export default function CollectionFormScreen({ collection, onClose, onSave }: Co
           />
         </Modal>
       )}
+
+      {/* File Selection Modal */}
+      <FileSelectionModal
+        visible={showFileSelection}
+        onClose={() => setShowFileSelection(false)}
+        onSelect={handleFileSelectionComplete}
+        allowMultiple={false}
+        acceptedTypes="images"
+        title="Select Collection Image"
+      />
     </View>
   );
 }

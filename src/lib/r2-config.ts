@@ -30,9 +30,10 @@ export const getPublicUrl = (key: string): string => {
 };
 
 // Generate unique file key
-export const generateFileKey = (originalName: string, prefix: string = 'media'): string => {
+export const generateFileKey = (originalName: string | undefined, prefix: string = 'media'): string => {
   const timestamp = Date.now();
   const randomId = Math.random().toString(36).substring(2, 15);
-  const extension = originalName.split('.').pop() || '';
+  const safeName = originalName || `file_${timestamp}`;
+  const extension = safeName.split('.').pop() || '';
   return `${prefix}/${timestamp}-${randomId}.${extension}`;
 };

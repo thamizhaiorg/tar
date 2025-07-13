@@ -11,6 +11,17 @@ const _schema = i.schema({
       path: i.string().unique().indexed(),
       url: i.string(),
     }),
+    files: i.entity({
+      title: i.string(),
+      url: i.string(),
+      handle: i.string().unique().indexed(),
+      alt: i.string().optional(),
+      type: i.string(),
+      size: i.number(),
+      reference: i.string().optional(),
+      dateAdded: i.date(),
+      storeId: i.string().indexed(),
+    }),
     $users: i.entity({
       email: i.string().unique().indexed().optional(),
     }),
@@ -585,6 +596,19 @@ const _schema = i.schema({
       reverse: {
         on: "$users",
         has: "many",
+        label: "store",
+      },
+    },
+
+    storeFiles: {
+      forward: {
+        on: "store",
+        has: "many",
+        label: "files",
+      },
+      reverse: {
+        on: "files",
+        has: "one",
         label: "store",
       },
     },

@@ -193,6 +193,116 @@ class R2Service {
     }
   }
 
+  // Generate structured path for file management
+  generateStructuredPath(
+    userId: string,
+    category: string,
+    fileName: string | undefined,
+    reference?: string
+  ): string {
+    // Sanitize user ID (remove symbols)
+    const sanitizedUserId = userId.replace(/[^a-zA-Z0-9]/g, '');
+
+    // Sanitize category name (lowercase, no spaces/symbols)
+    let sanitizedCategory = (category || 'general').toLowerCase().replace(/[^a-zA-Z0-9]/g, '');
+
+    // If reference is provided, use it to determine more specific category
+    if (reference) {
+      if (reference.includes('product')) sanitizedCategory = 'products';
+      else if (reference.includes('collection')) sanitizedCategory = 'collections';
+      else if (reference.includes('option')) sanitizedCategory = 'options';
+    }
+
+    // Generate random number for uniqueness
+    const randomNumber = Math.floor(Math.random() * 1000000000);
+
+    // Clean filename (remove spaces and special characters, keep extension)
+    const safeName = fileName || `file_${Date.now()}`;
+    const cleanFileName = safeName.toLowerCase().replace(/[^a-zA-Z0-9.-]/g, '');
+
+    return `${sanitizedUserId}/${sanitizedCategory}/${randomNumber}/${cleanFileName}`;
+  }
+
+  // Upload file with structured path
+  async uploadFileWithStructuredPath(
+    file: MediaFile,
+    userId: string,
+    category: string,
+    reference?: string
+  ): Promise<UploadResult> {
+    const structuredPath = this.generateStructuredPath(userId, category, file.name, reference);
+
+    // Use the structured path as the key directly
+    return this.uploadFileWithCustomKey(file, structuredPath);
+  }
+
+  // Upload file with custom key (internal method)
+  private async uploadFileWithCustomKey(file: MediaFile, key: string): Promise<UploadResult> {
+    if (!this.client) {
+      log.error('R2 client not initialized', 'R2Service');
+      return { success: false, error: 'R2 client not initialized' };
+    }
+
+    log.info(`Starting file upload with custom key: ${key}`, 'R2Service', {
+      size: file.size,
+      type: file.type
+    });
+
+    try {
+      return await PerformanceMonitor.measureAsync('r2-upload-custom', async () => {
+        // Read file content - use different approach for React Native
+        const response = await fetch(file.uri);
+
+        // For React Native, we need to handle the response differently
+        let body: Uint8Array;
+
+        try {
+          // Try to get as array buffer first
+          const arrayBuffer = await response.arrayBuffer();
+          body = new Uint8Array(arrayBuffer);
+        } catch (arrayBufferError) {
+          try {
+            // Fallback to blob
+            const blob = await response.blob();
+            const arrayBuffer = await blob.arrayBuffer();
+            body = new Uint8Array(arrayBuffer);
+          } catch (blobError) {
+            // Final fallback - read as text and convert
+            const text = await response.text();
+            body = new TextEncoder().encode(text);
+          }
+        }
+
+        // Upload to R2
+        const command = new PutObjectCommand({
+          Bucket: r2Config.bucketName,
+          Key: key,
+          Body: body,
+          ContentType: file.type,
+          ContentLength: body.byteLength,
+        });
+
+        await this.client.send(command);
+
+        // Return success with public URL
+        const url = getPublicUrl(key);
+        log.info(`File uploaded successfully with custom key: ${key}`, 'R2Service', { url });
+        return { success: true, url, key };
+      });
+
+    } catch (error) {
+      trackError(error as Error, 'R2Service', {
+        fileName: file.name,
+        fileSize: file.size,
+        customKey: key
+      });
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Upload failed'
+      };
+    }
+  }
+
   // Generate signed URL for reading files (for private buckets)
   async getSignedUrl(key: string, expiresIn: number = 3600): Promise<string | null> {
     if (!this.client) {
@@ -218,6 +328,119 @@ class R2Service {
   async getAccessibleUrl(key: string): Promise<string | null> {
     // For now, always use signed URLs since the bucket appears to be private
     return this.getSignedUrl(key);
+  }
+
+  // File management utilities
+
+  // Replace existing file (delete old, upload new)
+  async replaceFile(
+    oldKey: string,
+    newFile: MediaFile,
+    userId: string,
+    category: string,
+    reference?: string
+  ): Promise<UploadResult> {
+    try {
+      // Upload new file first
+      const uploadResult = await this.uploadFileWithStructuredPath(newFile, userId, category, reference);
+
+      if (uploadResult.success) {
+        // Delete old file after successful upload
+        await this.deleteFile(oldKey);
+        log.info(`File replaced successfully: ${oldKey} -> ${uploadResult.key}`, 'R2Service');
+      }
+
+      return uploadResult;
+    } catch (error) {
+      trackError(error as Error, 'R2Service', {
+        oldKey,
+        newFileName: newFile.name
+      });
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'File replacement failed'
+      };
+    }
+  }
+
+  // Check if file is referenced (utility for safe deletion)
+  async isFileReferenced(fileUrl: string, db: any): Promise<boolean> {
+    try {
+      const key = this.extractKeyFromUrl(fileUrl);
+      if (!key) return false;
+
+      // Check if file is referenced in products, collections, or options
+      // This would need to be implemented based on your specific schema
+      // For now, return true to prevent accidental deletion
+      return true;
+    } catch (error) {
+      log.error('Error checking file references', 'R2Service', { error });
+      return true; // Err on the side of caution
+    }
+  }
+
+  // Batch delete files (for cleanup operations)
+  async deleteFiles(keys: string[]): Promise<{ success: boolean; deletedKeys: string[]; errors: string[] }> {
+    const deletedKeys: string[] = [];
+    const errors: string[] = [];
+
+    for (const key of keys) {
+      try {
+        const success = await this.deleteFile(key);
+        if (success) {
+          deletedKeys.push(key);
+        } else {
+          errors.push(`Failed to delete ${key}`);
+        }
+      } catch (error) {
+        errors.push(`Error deleting ${key}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
+
+    return {
+      success: errors.length === 0,
+      deletedKeys,
+      errors
+    };
+  }
+
+  // Get file metadata without downloading
+  async getFileMetadata(key: string): Promise<{ size?: number; lastModified?: Date; contentType?: string } | null> {
+    if (!this.client) {
+      return null;
+    }
+
+    try {
+      const command = new HeadObjectCommand({
+        Bucket: r2Config.bucketName,
+        Key: key,
+      });
+
+      const response = await this.client.send(command);
+
+      return {
+        size: response.ContentLength,
+        lastModified: response.LastModified,
+        contentType: response.ContentType
+      };
+    } catch (error) {
+      log.error(`Failed to get metadata for ${key}`, 'R2Service', { error });
+      return null;
+    }
+  }
+
+  // Generate unique handle for file entity
+  generateFileHandle(fileName: string | undefined, userId: string): string {
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substring(2, 8);
+    const sanitizedUserId = userId.replace(/[^a-zA-Z0-9]/g, '').substring(0, 8);
+
+    // Handle undefined or null fileName
+    const safeName = fileName || `file_${timestamp}`;
+    const cleanName = safeName.replace(/[^a-zA-Z0-9.-]/g, '').toLowerCase();
+    const nameWithoutExt = cleanName.split('.')[0];
+
+    return `${sanitizedUserId}-${nameWithoutExt}-${timestamp}-${random}`;
   }
 }
 

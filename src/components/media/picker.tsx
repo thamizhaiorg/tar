@@ -45,7 +45,8 @@ export default function MediaPicker({
 
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: mediaTypes as any, // Convert string to enum
+        mediaTypes: mediaTypes === 'Images' ? ['images'] :
+                   mediaTypes === 'Videos' ? ['videos'] : ['images', 'videos'],
         allowsMultipleSelection: allowMultiple,
         quality,
         exif: false,
@@ -73,7 +74,8 @@ export default function MediaPicker({
 
     try {
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: mediaTypes as any, // Convert string to enum
+        mediaTypes: mediaTypes === 'Images' ? ['images'] :
+                   mediaTypes === 'Videos' ? ['videos'] : ['images', 'videos'],
         quality,
         exif: false,
       });

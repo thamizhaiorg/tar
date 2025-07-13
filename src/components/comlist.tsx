@@ -19,6 +19,10 @@ export default function ComList({ onNavigate, onClose }: ComListProps) {
       title: 'Collections'
     },
     {
+      id: 'files',
+      title: 'Files'
+    },
+    {
       id: 'options',
       title: 'Options'
     },

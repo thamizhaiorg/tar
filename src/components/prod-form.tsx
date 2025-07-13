@@ -8,11 +8,14 @@ import * as ImagePicker from 'expo-image-picker';
 
 import Input from './ui/Input';
 import QuantitySelector from './ui/qty';
+import FileUpload from './ui/file-upload';
+import FileSelectionModal from './ui/file-selection-modal';
 
 import R2Image from './ui/r2-image';
 import { db, getCurrentTimestamp } from '../lib/instant';
 import { MediaManager, MediaItem } from './media';
 import { useStore } from '../lib/store-context';
+import { fileManager } from '../lib/file-manager';
 import { createDefaultLocation } from '../lib/inventory-setup';
 
 // Simple replacement components for removed vtabs
@@ -192,6 +195,8 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
   const [mediasUploading, setMediasUploading] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
+  const [showFileSelection, setShowFileSelection] = useState(false);
+  const [currentFileField, setCurrentFileField] = useState<'image' | 'medias'>('image');
 
   const rotateAnim = useRef(new Animated.Value(0)).current;
   const [selectedOptionSet, setSelectedOptionSet] = useState<string | null>(null);
@@ -1040,12 +1045,42 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
     }
   };
 
+  // New file upload handlers using file manager
+  const handleFileUploadComplete = (fileId: string, fileData: any) => {
+    if (currentFileField === 'image') {
+      updateField('image', fileData.url);
+      updateField('imageFileId', fileId); // Store file ID for reference
+    } else if (currentFileField === 'medias') {
+      const currentMedias = formData.medias || [];
+      const newMedia = {
+        url: fileData.url,
+        fileId: fileId,
+        name: fileData.title,
+        type: fileData.type
+      };
+      updateField('medias', [...currentMedias, newMedia]);
+    }
+  };
 
+  const handleFileSelectionComplete = (files: any[]) => {
+    if (files.length > 0) {
+      const file = files[0]; // For primary image, take first file
+      if (currentFileField === 'image') {
+        updateField('image', file.url);
+        updateField('imageFileId', file.id);
+      }
+    }
+  };
+
+  const openFileSelection = (field: 'image' | 'medias') => {
+    setCurrentFileField(field);
+    setShowFileSelection(true);
+  };
 
   const handlePrimaryImageUpload = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: 'Images' as any,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
@@ -1085,7 +1120,7 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
   const handleMediasUpload = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: 'Images' as any,
+        mediaTypes: ['images'],
         allowsMultipleSelection: true,
         quality: 0.8,
       });
@@ -2967,6 +3002,16 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
         onGenerate={async (selectedValues, optionSetData) => {
           await generateItemsFromSelectedValues(selectedValues, optionSetData);
         }}
+      />
+
+      {/* File Selection Modal */}
+      <FileSelectionModal
+        visible={showFileSelection}
+        onClose={() => setShowFileSelection(false)}
+        onSelect={handleFileSelectionComplete}
+        allowMultiple={currentFileField === 'medias'}
+        acceptedTypes="images"
+        title={currentFileField === 'image' ? 'Select Product Image' : 'Select Media Files'}
       />
 
     </View>

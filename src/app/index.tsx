@@ -19,6 +19,7 @@ import Options from "../components/options";
 import MetafieldsSystem from "../components/metafields-system";
 import Locations from "../components/locations";
 import ItemsScreen from "../components/items";
+import FilesScreen from "../components/files";
 
 import BottomNavigation, { BottomTab, MainScreen } from "../components/nav";
 import BottomTabContent from "../components/tabs";
@@ -29,7 +30,7 @@ import { log, trackError } from "../lib/logger";
 import ErrorBoundary from "../components/ui/error-boundary";
 
 
-type Screen = 'space' | 'sales' | 'reports' | 'products' | 'collections' | 'options' | 'metafields' | 'menu' | 'option-create' | 'option-edit' | 'items' | 'locations';
+type Screen = 'space' | 'sales' | 'reports' | 'products' | 'collections' | 'options' | 'metafields' | 'menu' | 'option-create' | 'option-edit' | 'items' | 'locations' | 'files';
 
 interface NavigationState {
   screen: Screen;
@@ -129,7 +130,7 @@ export default function Page() {
       }
 
       // For full-screen screens, handle back navigation based on context
-      if (currentScreen === 'options' || currentScreen === 'metafields' || currentScreen === 'items' || currentScreen === 'locations') {
+      if (currentScreen === 'options' || currentScreen === 'metafields' || currentScreen === 'items' || currentScreen === 'locations' || currentScreen === 'files') {
         // If items screen was opened from product form, go back to product form
         if (currentScreen === 'items' && navigationData?.productId) {
           // Use the full product object if available, otherwise find by ID
@@ -414,6 +415,11 @@ export default function Page() {
           onClose={() => handleNavigate('menu')}
         />;
 
+      case 'files':
+        return <FilesScreen
+          onClose={() => handleNavigate('menu')}
+        />;
+
       case 'menu':
         return <FullScreenMenu
           onNavigate={handleNavigate}
@@ -442,7 +448,7 @@ export default function Page() {
     <StoreProvider>
       <ErrorBoundary>
         <View className="flex flex-1">
-          {currentScreen === 'menu' || currentScreen === 'options' || currentScreen === 'metafields' || currentScreen === 'items' || currentScreen === 'locations' || isProductFormOpen || isCollectionFormOpen || isItemStockOpen ? (
+          {currentScreen === 'menu' || currentScreen === 'options' || currentScreen === 'metafields' || currentScreen === 'items' || currentScreen === 'locations' || currentScreen === 'files' || isProductFormOpen || isCollectionFormOpen || isItemStockOpen ? (
             // Full screen screens without header or bottom navigation (including product and collection forms)
             <ErrorBoundary>
               {renderMainContent()}
@@ -669,6 +675,8 @@ function Header({ currentScreen, onNavigate, showBottomTabs, setShowBottomTabs, 
         return { title: 'Options', icon: 'O' };
       case 'metafields':
         return { title: 'Metafields', icon: '#' };
+      case 'files':
+        return { title: 'Files', icon: '📁' };
 
       case 'sales':
         return { title: 'Sales', icon: '💰' };

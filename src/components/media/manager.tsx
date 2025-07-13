@@ -97,7 +97,7 @@ export default function MediaManager({
 
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: 'Images' as any,
+        mediaTypes: ['images'],
         allowsMultipleSelection: allowMultiple,
         quality: 0.8,
         exif: false,
