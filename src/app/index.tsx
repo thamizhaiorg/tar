@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Text, View, TouchableOpacity, BackHandler, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from '@expo/vector-icons';
+import { useAuth } from "../lib/auth-context";
+import AuthScreen from "../screens/auth";
 import ProductsScreen from "../components/products";
 import ProductFormScreen from "../components/prod-form";
 import CollectionsScreen from "../components/collections";
@@ -38,6 +40,7 @@ interface NavigationState {
 }
 
 export default function Page() {
+  const { user, isLoading } = useAuth();
   const [currentScreen, setCurrentScreen] = useState<Screen>('space');
   const [activeBottomTab, setActiveBottomTab] = useState<BottomTab>('workspace');
   const [showBottomTabs, setShowBottomTabs] = useState(true); // Start untoggled (bottom tabs shown, square icon not highlighted)
@@ -420,6 +423,20 @@ export default function Page() {
         return <SpaceScreen onOpenMenu={() => handleNavigate('menu')} />;
     }
   };
+
+  // Show loading screen while checking authentication
+  if (isLoading) {
+    return (
+      <View className="flex-1 bg-white items-center justify-center">
+        <Text className="text-lg text-gray-600">Loading...</Text>
+      </View>
+    );
+  }
+
+  // Show auth screen if user is not authenticated
+  if (!user) {
+    return <AuthScreen onAuthSuccess={() => {}} />;
+  }
 
   return (
     <StoreProvider>

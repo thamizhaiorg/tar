@@ -14,6 +14,16 @@ const _schema = i.schema({
     $users: i.entity({
       email: i.string().unique().indexed().optional(),
     }),
+    // User profile entity for additional user data
+    peoplea: i.entity({
+      userId: i.string().unique().indexed(), // Links to $users.id
+      name: i.string().optional(),
+      profileImage: i.string().optional(),
+      phone: i.string().optional(),
+      bio: i.string().optional(),
+      createdAt: i.date(),
+      updatedAt: i.date().optional(),
+    }),
     brands: i.entity({
       name: i.string().unique().indexed(),
       storeId: i.string().indexed(),
@@ -304,6 +314,7 @@ const _schema = i.schema({
       phone: i.string().optional(),
       updatedAt: i.date().optional(),
       website: i.string().optional(),
+      peopleaId: i.string().indexed().optional(), // Links to peoplea entity
     }),
     tags: i.entity({
       createdAt: i.date().optional(),
@@ -535,6 +546,33 @@ const _schema = i.schema({
         on: "items",
         has: "many",
         label: "orderitems",
+      },
+    },
+
+    // Peoplea relationships
+    peoplea$users: {
+      forward: {
+        on: "peoplea",
+        has: "one",
+        label: "$users",
+      },
+      reverse: {
+        on: "$users",
+        has: "one",
+        label: "peoplea",
+      },
+    },
+
+    peopleaStores: {
+      forward: {
+        on: "peoplea",
+        has: "many",
+        label: "stores",
+      },
+      reverse: {
+        on: "store",
+        has: "one",
+        label: "peoplea",
       },
     },
 

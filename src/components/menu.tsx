@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, BackHandler, StatusBar, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStore } from '../lib/store-context';
+import { useAuth } from '../lib/auth-context';
 import StoreForm from './store-form';
 import StoreManagement from './store-mgmt';
 import ComList from './comlist';
+import PeopleaScreen from '../screens/peoplea';
 
 type Screen = 'space' | 'sales' | 'reports' | 'products' | 'collections' | 'options' | 'metafields' | 'menu' | 'items' | 'locations';
 
@@ -16,9 +18,11 @@ interface FullScreenMenuProps {
 export default function FullScreenMenu({ onNavigate, onClose }: FullScreenMenuProps) {
   const insets = useSafeAreaInsets();
   const { currentStore } = useStore();
+  const { user, peopleaProfile } = useAuth();
   const [showStoreForm, setShowStoreForm] = useState(false);
   const [showStoreManagement, setShowStoreManagement] = useState(false);
   const [showComList, setShowComList] = useState(false);
+  const [showPeopleaScreen, setShowPeopleaScreen] = useState(false);
 
   // User status and notification data
   const userData = {
@@ -47,6 +51,10 @@ export default function FullScreenMenu({ onNavigate, onClose }: FullScreenMenuPr
         setShowStoreManagement(false);
         return true;
       }
+      if (showPeopleaScreen) {
+        setShowPeopleaScreen(false);
+        return true;
+      }
       // Otherwise close menu
       onClose();
       return true;
@@ -54,7 +62,7 @@ export default function FullScreenMenu({ onNavigate, onClose }: FullScreenMenuPr
 
     const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
     return () => backHandler.remove();
-  }, [showStoreForm, showStoreManagement, onClose]);
+  }, [showStoreForm, showStoreManagement, showPeopleaScreen, onClose]);
 
 
 
@@ -100,6 +108,14 @@ export default function FullScreenMenu({ onNavigate, onClose }: FullScreenMenuPr
     );
   }
 
+  if (showPeopleaScreen) {
+    return (
+      <PeopleaScreen
+        onClose={() => setShowPeopleaScreen(false)}
+      />
+    );
+  }
+
   return (
     <View className="flex-1 bg-white">
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
@@ -109,13 +125,25 @@ export default function FullScreenMenu({ onNavigate, onClose }: FullScreenMenuPr
           {/* User Status Header */}
           <View className="mb-6">
             <View className="flex-row items-center justify-between">
-              <View className="w-12 h-12" style={{ borderRadius: 24, overflow: 'hidden' }}>
-                <Image
-                  source={require('../../assets/raven.png')}
-                  style={{ width: 48, height: 48 }}
-                  resizeMode="cover"
-                />
-              </View>
+              <TouchableOpacity
+                onPress={() => setShowPeopleaScreen(true)}
+                className="w-12 h-12"
+                style={{ borderRadius: 24, overflow: 'hidden' }}
+              >
+                {peopleaProfile?.profileImage ? (
+                  <Image
+                    source={{ uri: peopleaProfile.profileImage }}
+                    style={{ width: 48, height: 48 }}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View className="w-12 h-12 bg-gray-200 items-center justify-center" style={{ borderRadius: 24 }}>
+                    <Text className="text-lg text-gray-600">
+                      {peopleaProfile?.name ? peopleaProfile.name.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase() || '👤'}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
               <Text className="text-lg font-bold text-gray-900">
                 {(userData.status || '').toLowerCase()}
               </Text>

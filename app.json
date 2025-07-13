@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "tar",
-    "slug": "tar-pos",
+    "slug": "tarapp",
     "version": "1.0.0",
     "scheme": "tar-pos",
     "userInterfaceStyle": "automatic",
@@ -58,8 +58,9 @@
         "root": "./src/app"
       },
       "eas": {
-        "projectId": "c48b448e-e4f5-479d-b9f9-837c2470b000"
+        "projectId": "cc294013-1344-4934-8554-0d3cce89d739"
       }
-    }
+    },
+    "owner": "thamizhaiorg"
   }
 }
