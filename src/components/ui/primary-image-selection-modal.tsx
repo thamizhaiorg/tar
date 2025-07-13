@@ -23,27 +23,24 @@ interface MediaItem {
   userId?: string;
 }
 
-interface MediaSelectionModalProps {
+interface PrimaryImageSelectionModalProps {
   visible: boolean;
   onClose: () => void;
-  onSelect: (media: MediaItem[]) => void;
+  onSelect: (media: MediaItem) => void;
   title?: string;
-  selectedMedia?: MediaItem[];
 }
 
-export default function MediaSelectionModal({
+export default function PrimaryImageSelectionModal({
   visible,
   onClose,
   onSelect,
-  title = 'Select Medias',
-  selectedMedia = []
-}: MediaSelectionModalProps) {
+  title = 'Select Primary Image'
+}: PrimaryImageSelectionModalProps) {
   const insets = useSafeAreaInsets();
   const { currentStore } = useStore();
   const { user } = db.useAuth();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedMediaIds, setSelectedMediaIds] = useState<Set<string>>(new Set());
   const [uploading, setUploading] = useState(false);
 
   // Use the files hook to get images only
@@ -51,7 +48,7 @@ export default function MediaSelectionModal({
 
   // Debug: Log files count
   useEffect(() => {
-    console.log('📁 MEDIA MODAL: Files count:', files.length);
+    console.log('📁 PRIMARY MODAL: Files count:', files.length);
   }, [files.length]);
 
   // Handle native back button
@@ -67,13 +64,6 @@ export default function MediaSelectionModal({
     return () => backHandler.remove();
   }, [visible, onClose]);
 
-  // Initialize selected media
-  useEffect(() => {
-    if (selectedMedia.length > 0) {
-      setSelectedMediaIds(new Set(selectedMedia.map(m => m.id)));
-    }
-  }, [selectedMedia]);
-
   // Filter images based on search query
   const filteredImages = useMemo(() => {
     if (!searchQuery.trim()) return files;
@@ -85,108 +75,73 @@ export default function MediaSelectionModal({
     );
   }, [files, searchQuery]);
 
-  const handleMediaToggle = (media: MediaItem) => {
-    const newSelected = new Set(selectedMediaIds);
-
-    // Always allow multiple selection for Medias
-    if (newSelected.has(media.id)) {
-      newSelected.delete(media.id);
-    } else {
-      newSelected.add(media.id);
-    }
-
-    setSelectedMediaIds(newSelected);
-  };
-
-  const handleConfirmSelection = () => {
-    const selectedMediaArray = filteredImages.filter(media => selectedMediaIds.has(media.id));
-    onSelect(selectedMediaArray);
-    onClose();
+  const handleImageSelect = (media: MediaItem) => {
+    onSelect(media);
+    onClose(); // Close immediately after selection
   };
 
   const handleUpload = async () => {
-    if (!currentStore || !user) {
-      Alert.alert('Error', 'Please ensure you are logged in and have a store selected');
+    if (!user || !currentStore) {
+      Alert.alert('Error', 'Please ensure you are logged in and have selected a store');
       return;
     }
 
     try {
-      // Request permissions
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Required', 'Please grant media library permissions to upload images.');
+        Alert.alert('Permission Required', 'Please grant camera roll permissions to upload images.');
         return;
       }
 
-      setUploading(true);
-
-      // Launch image picker
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsMultipleSelection: allowMultiple,
+        mediaTypes: ['images'],
+        allowsMultipleSelection: false, // Single selection for primary image
         quality: 0.8,
-        allowsEditing: false,
+        exif: false,
       });
 
-      if (!result.canceled && result.assets) {
-        const uploadPromises = result.assets.map(async (asset) => {
-          const file = {
-            uri: asset.uri,
-            name: asset.fileName || `image_${Date.now()}.jpg`,
-            type: asset.type || 'image/jpeg',
-            size: asset.fileSize || 0
-          };
-
-          return await uploadFile(file, {
-            title: file.name,
-            alt: ''
-          });
+      if (!result.canceled && result.assets.length > 0) {
+        setUploading(true);
+        
+        const asset = result.assets[0];
+        const uploadResult = await uploadFile(asset, {
+          title: `primary_image_${Date.now()}`,
+          alt: 'Primary image'
         });
 
-        const results = await Promise.all(uploadPromises);
-
-        console.log('📤 MEDIA MODAL: Upload results:', results);
-
-        // Check for any failures
-        const failures = results.filter(r => !r.success);
-        const successes = results.filter(r => r.success);
-
-        if (failures.length > 0) {
-          console.log('❌ MEDIA MODAL: Upload failures:', failures);
-          Alert.alert('Upload Error', `${failures.length} file(s) failed to upload`);
+        if (uploadResult.success && uploadResult.fileRecord) {
+          console.log('✅ PRIMARY MODAL: Upload successful, fileRecord:', uploadResult.fileRecord);
+          // Immediately select the uploaded image
+          handleImageSelect(uploadResult.fileRecord);
         } else {
-          console.log('✅ MEDIA MODAL: All uploads successful:', successes.length);
-          Alert.alert('Success', `${results.length} image(s) uploaded successfully`);
+          console.log('❌ PRIMARY MODAL: Upload failed:', uploadResult.error);
+          Alert.alert('Upload Error', uploadResult.error || 'Failed to upload image');
         }
       }
     } catch (error) {
       console.error('Upload error:', error);
-      Alert.alert('Upload Error', 'Failed to upload images. Please try again.');
+      Alert.alert('Error', 'Failed to upload image');
     } finally {
       setUploading(false);
     }
   };
 
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 B';
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
     const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const renderMediaItem = ({ item: media }: { item: MediaItem }) => {
-    const isSelected = selectedMediaIds.has(media.id);
-
+  const renderImageItem = ({ item: media }: { item: MediaItem }) => {
     return (
       <TouchableOpacity
-        onPress={() => handleMediaToggle(media)}
+        onPress={() => handleImageSelect(media)}
         className="relative"
         style={{ width: '48%', marginBottom: 12 }}
       >
-        <View className={`bg-white rounded-lg overflow-hidden border ${
-          isSelected ? 'border-blue-500' : 'border-gray-100'
-        } shadow-sm`}>
+        <View className="bg-white rounded-lg overflow-hidden border border-gray-100 shadow-sm">
           <View style={{ aspectRatio: 1, backgroundColor: '#F8F9FA' }}>
             <R2Image
               url={media.url}
@@ -200,28 +155,18 @@ export default function MediaSelectionModal({
             </Text>
           </View>
         </View>
-        
-        {/* Selection Checkbox */}
-        <View className="absolute top-2 right-2">
-          <View className={`w-6 h-6 rounded border-2 items-center justify-center ${
-            isSelected 
-              ? 'bg-blue-500 border-blue-500' 
-              : 'bg-white border-gray-300'
-          }`}>
-            {isSelected && (
-              <MaterialIcons name="check" size={16} color="white" />
-            )}
-          </View>
-        </View>
       </TouchableOpacity>
     );
   };
+
+  if (!visible) return null;
 
   return (
     <Modal
       visible={visible}
       animationType="slide"
       presentationStyle="pageSheet"
+      onRequestClose={onClose}
     >
       <View className="flex-1 bg-white" style={{ paddingTop: insets.top }}>
         {/* Header */}
@@ -254,13 +199,14 @@ export default function MediaSelectionModal({
         </View>
 
         {/* Search Bar */}
-        <View className="bg-white px-4 py-3">
-          <View className="flex-row items-center">
+        <View className="bg-white px-4 py-3 border-b border-gray-200">
+          <View className="flex-row items-center bg-gray-50 rounded-lg px-3 py-2">
+            <Feather name="search" size={16} color="#9CA3AF" />
             <TextInput
-              placeholder="Search"
+              placeholder="Search images by name..."
               value={searchQuery}
               onChangeText={setSearchQuery}
-              className="flex-1 text-base text-gray-900 mr-3"
+              className="flex-1 ml-2 text-base text-gray-900"
               placeholderTextColor="#9CA3AF"
             />
           </View>
@@ -275,20 +221,20 @@ export default function MediaSelectionModal({
               {searchQuery && (
                 <Text className="text-sm text-gray-400 mt-1 text-center">Try adjusting your search</Text>
               )}
-              <TouchableOpacity
+              <TouchableOpacity 
                 onPress={handleUpload}
                 disabled={uploading}
                 className="mt-4 bg-blue-600 px-4 py-2 rounded-lg"
               >
                 <Text className="text-white font-medium">
-                  {uploading ? 'Uploading...' : 'Upload Images'}
+                  {uploading ? 'Uploading...' : 'Upload Image'}
                 </Text>
               </TouchableOpacity>
             </View>
           ) : (
             <FlatList
               data={filteredImages}
-              renderItem={renderMediaItem}
+              renderItem={renderImageItem}
               keyExtractor={(item) => item.id}
               numColumns={2}
               contentContainerStyle={{
@@ -300,25 +246,6 @@ export default function MediaSelectionModal({
             />
           )}
         </View>
-
-        {/* Bottom Action Bar */}
-        {selectedMediaIds.size > 0 && (
-          <View className="bg-white border-t border-gray-200 px-4 py-3">
-            <View className="flex-row items-center justify-between">
-              <Text className="text-gray-700 font-medium">
-                {selectedMediaIds.size} selected
-              </Text>
-              <TouchableOpacity
-                onPress={handleConfirmSelection}
-                className="bg-blue-600 px-6 py-2 rounded-lg"
-              >
-                <Text className="text-white font-medium">
-                  Select Medias
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
       </View>
     </Modal>
   );

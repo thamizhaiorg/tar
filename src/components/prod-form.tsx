@@ -9,6 +9,7 @@ import Input from './ui/Input';
 import QuantitySelector from './ui/qty';
 import FileUpload from './ui/file-upload';
 import MediaSelectionModal from './ui/media-selection-modal';
+import PrimaryImageSelectionModal from './ui/primary-image-selection-modal';
 
 import R2Image from './ui/r2-image';
 import { db, getCurrentTimestamp } from '../lib/instant';
@@ -192,12 +193,16 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
   const [showMediaSelection, setShowMediaSelection] = useState(false);
-  const [currentMediaField, setCurrentMediaField] = useState<'image' | 'medias'>('image');
+  const [showPrimaryImageSelection, setShowPrimaryImageSelection] = useState(false);
+
+
+
+
 
   const [selectedOptionSet, setSelectedOptionSet] = useState<string | null>(null);
   const [selectedOptionValues, setSelectedOptionValues] = useState<string[]>([]);
 
-  const [showFullScreenImageDrawer, setShowFullScreenImageDrawer] = useState(false);
+
   const [showFullScreenNotesEditor, setShowFullScreenNotesEditor] = useState(false);
   const [showOptionSetSelector, setShowOptionSetSelector] = useState(false);
   const [selectedOptionSets, setSelectedOptionSets] = useState<string[]>([]);
@@ -1043,25 +1048,39 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
   };
 
   const handleMediaSelectionComplete = (media: any[]) => {
-    if (currentMediaField === 'image' && media.length > 0) {
-      const selectedMedia = media[0]; // For primary image, take first media
-      updateField('image', selectedMedia.url);
-      updateField('imageFileId', selectedMedia.id);
-    } else if (currentMediaField === 'medias') {
-      // Convert media items to the format expected by MediaManager
-      const mediaItems = media.map(m => ({
-        url: m.url,
-        fileId: m.id,
-        name: m.title,
-        type: m.type
-      }));
-      updateField('medias', mediaItems);
+    // Convert media items to the format expected by MediaManager
+    const mediaItems = media.map(m => ({
+      url: m.url,
+      fileId: m.id,
+      name: m.title,
+      type: m.type
+    }));
+    updateField('medias', mediaItems);
+  };
+
+  const handlePrimaryImageSelectionComplete = (media: any) => {
+    // Update both fields in a single operation to avoid state race condition
+    const newFormData = {
+      ...formData,
+      image: media.url,
+      imageFileId: media.id
+    };
+
+    setImageError(false); // Reset image error
+    setFormData(newFormData);
+
+    // Only set hasChanges if fully initialized and there are actual changes
+    if (!isInitializing && isDataLoaded) {
+      setHasChanges(checkForChanges(newFormData));
     }
   };
 
   const openMediaSelection = (field: 'image' | 'medias') => {
-    setCurrentMediaField(field);
-    setShowMediaSelection(true);
+    if (field === 'image') {
+      setShowPrimaryImageSelection(true);
+    } else {
+      setShowMediaSelection(true);
+    }
   };
 
   const handlePrimaryImageUpload = () => {
@@ -1237,14 +1256,14 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
-                onPress={() => setShowFullScreenImageDrawer(true)}
+                onPress={handlePrimaryImageUpload}
               >
                 {formData.image && !imageError ? (
                   <R2Image
                     url={formData.image}
                     style={{ width: '100%', height: '100%' }}
                     resizeMode="cover"
-                    onError={(error) => {
+                    onError={() => {
                       setImageError(true);
                     }}
                     onLoad={() => {
@@ -1597,6 +1616,77 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
       ),
     },
     {
+      id: 'media',
+      label: 'Media',
+      icon: <MaterialIcons name="photo-library" size={20} color="#6B7280" />,
+      content: (
+        <TabContent title="">
+          <View style={{ margin: -16, padding: 0 }}>
+            <View style={{
+              marginTop: 0,
+              backgroundColor: '#fff',
+              borderRadius: 12,
+              marginVertical: 0,
+              overflow: 'hidden',
+            }}>
+              {/* Medias Section */}
+              <View style={{ padding: 24 }}>
+                <Text style={{ fontSize: 18, fontWeight: '600', color: '#111827', marginBottom: 16 }}>
+                  Media Gallery
+                </Text>
+
+                {/* Media Grid */}
+                {formData.medias && formData.medias.length > 0 ? (
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
+                    {formData.medias.map((media: any, index: number) => (
+                      <View key={index} style={{ width: 100, height: 100 }}>
+                        <R2Image
+                          url={media.url}
+                          style={{ width: '100%', height: '100%', borderRadius: 8 }}
+                          resizeMode="cover"
+                        />
+                      </View>
+                    ))}
+                  </View>
+                ) : (
+                  <View style={{
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    paddingVertical: 40,
+                    backgroundColor: '#F9FAFB',
+                    borderRadius: 8,
+                    marginBottom: 16
+                  }}>
+                    <MaterialIcons name="photo-library" size={48} color="#9CA3AF" />
+                    <Text style={{ color: '#6B7280', marginTop: 8 }}>No media added yet</Text>
+                  </View>
+                )}
+
+                {/* Add Media Button */}
+                <TouchableOpacity
+                  onPress={() => setShowMediaSelection(true)}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: '#3B82F6',
+                    borderRadius: 8,
+                    paddingVertical: 12,
+                    paddingHorizontal: 20
+                  }}
+                >
+                  <MaterialIcons name="add" size={20} color="white" />
+                  <Text style={{ marginLeft: 8, fontSize: 16, color: 'white', fontWeight: '500' }}>
+                    {formData.medias && formData.medias.length > 0 ? 'Add More Media' : 'Add Media'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </TabContent>
+      ),
+    },
+    {
       id: 'categorization',
       label: 'Categorization',
       icon: <Ionicons name="folder-outline" size={20} color="#6B7280" />,
@@ -1785,6 +1875,8 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
             tabIcon = <Ionicons name="cube-outline" size={20} color={iconColor} />;
           } else if (tab.id === 'metafields') {
             tabIcon = <MaterialIcons name="numbers" size={20} color={iconColor} />;
+          } else if (tab.id === 'media') {
+            tabIcon = <MaterialIcons name="photo-library" size={20} color={iconColor} />;
           } else if (tab.id === 'categorization') {
             tabIcon = <Ionicons name="folder-outline" size={20} color={iconColor} />;
           }
@@ -2066,134 +2158,7 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
 
 
 
-      {/* Full-Screen Image Drawer */}
-      <Modal
-        visible={showFullScreenImageDrawer}
-        animationType="slide"
-        presentationStyle="fullScreen"
-        onRequestClose={() => setShowFullScreenImageDrawer(false)}
-      >
-        <View style={{ flex: 1, backgroundColor: '#fff' }}>
-          {/* Header */}
-          <View style={{
-            paddingTop: insets.top + 16,
-            paddingBottom: 16,
-            paddingHorizontal: 24,
-            backgroundColor: '#fff',
-          }}>
-            <Text style={{
-              fontSize: 18,
-              fontWeight: '500',
-              color: '#111827',
-            }}>
-              Medias
-            </Text>
-          </View>
 
-          {/* Content */}
-          <ScrollView
-            style={{ flex: 1 }}
-            contentContainerStyle={{ padding: 24 }}
-            showsVerticalScrollIndicator={false}
-          >
-            {/* Primary Image Section */}
-            <View style={{ marginBottom: 24 }}>
-              <TouchableOpacity
-                style={{
-                  width: 140,
-                  height: 140,
-                  backgroundColor: formData.image && !imageError ? 'transparent' : '#F8F9FA',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-                onPress={formData.image && !imageError ? () => setShowPrimaryImageActions(true) : handlePrimaryImageUpload}
-                activeOpacity={0.8}
-              >
-                {formData.image && !imageError ? (
-                  <R2Image
-                    url={formData.image}
-                    style={{ width: 140, height: 140 }}
-                    resizeMode="cover"
-                    onError={(error) => {
-                      setImageError(true);
-                    }}
-                    onLoad={() => {
-                      // Image loaded successfully
-                    }}
-                  />
-                ) : (
-                  <View style={{ alignItems: 'center' }}>
-                    <MaterialIcons name="add" size={20} color="#9CA3AF" />
-                  </View>
-                )}
-              </TouchableOpacity>
-            </View>
-
-            {/* Medias Section */}
-            <View style={{ marginBottom: 24 }}>
-              <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827', marginBottom: 12 }}>
-                Media Gallery
-              </Text>
-
-              {/* Media Grid */}
-              {formData.medias && formData.medias.length > 0 ? (
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-                  {formData.medias.map((media: any, index: number) => (
-                    <View key={index} style={{ position: 'relative' }}>
-                      <R2Image
-                        url={media.url}
-                        style={{ width: 80, height: 80, borderRadius: 8 }}
-                        resizeMode="cover"
-                      />
-                      <TouchableOpacity
-                        onPress={() => {
-                          const newMedias = formData.medias.filter((_: any, i: number) => i !== index);
-                          updateField('medias', newMedias);
-                        }}
-                        style={{
-                          position: 'absolute',
-                          top: -8,
-                          right: -8,
-                          backgroundColor: '#EF4444',
-                          borderRadius: 12,
-                          width: 24,
-                          height: 24,
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}
-                      >
-                        <MaterialIcons name="close" size={16} color="white" />
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                </View>
-              ) : null}
-
-              {/* Add Media Button */}
-              <TouchableOpacity
-                onPress={() => openMediaSelection('medias')}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: '#F3F4F6',
-                  borderRadius: 8,
-                  paddingVertical: 16,
-                  paddingHorizontal: 20,
-                  borderWidth: 1,
-                  borderColor: '#E5E7EB',
-                  borderStyle: 'dashed'
-                }}
-              >
-                <MaterialIcons name="add-photo-alternate" size={24} color="#6B7280" />
-                <Text style={{ marginLeft: 8, fontSize: 16, color: '#6B7280', fontWeight: '500' }}>
-                  {formData.medias && formData.medias.length > 0 ? 'Add More Images' : 'Add Images'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
-        </View>
-      </Modal>
 
       {/* Primary Image Actions Drawer */}
       <Modal
@@ -2909,13 +2874,20 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
         }}
       />
 
+      {/* Primary Image Selection Modal */}
+      <PrimaryImageSelectionModal
+        visible={showPrimaryImageSelection}
+        onClose={() => setShowPrimaryImageSelection(false)}
+        onSelect={handlePrimaryImageSelectionComplete}
+        title="Select Primary Image"
+      />
+
       {/* Media Selection Modal */}
       <MediaSelectionModal
         visible={showMediaSelection}
         onClose={() => setShowMediaSelection(false)}
         onSelect={handleMediaSelectionComplete}
-        allowMultiple={currentMediaField === 'medias'}
-        title={currentMediaField === 'image' ? 'Select Product Image' : 'Select Media Images'}
+        title="Select Medias"
       />
 
     </View>
