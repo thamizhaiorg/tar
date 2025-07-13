@@ -21,6 +21,7 @@ const _schema = i.schema({
       reference: i.string().optional(),
       dateAdded: i.date(),
       storeId: i.string().indexed(),
+      userId: i.string().indexed().optional(), // Links to $users.id
     }),
     $users: i.entity({
       email: i.string().unique().indexed().optional(),
@@ -610,6 +611,20 @@ const _schema = i.schema({
         on: "files",
         has: "one",
         label: "store",
+      },
+    },
+
+    // Files relationships
+    files$users: {
+      forward: {
+        on: "files",
+        has: "one",
+        label: "$users",
+      },
+      reverse: {
+        on: "$users",
+        has: "many",
+        label: "files",
       },
     },
   },

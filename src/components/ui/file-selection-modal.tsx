@@ -18,6 +18,7 @@ interface FileItem {
   reference?: string;
   dateAdded: Date;
   storeId: string;
+  userId?: string;
 }
 
 interface FileSelectionModalProps {

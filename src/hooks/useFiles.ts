@@ -21,7 +21,8 @@ export interface UseFilesResult {
 
 export function useFiles(options: UseFilesOptions = {}): UseFilesResult {
   const { currentStore } = useStore();
-  
+  const { user } = db.useAuth();
+
   // Query files for current store
   const { data: filesData, isLoading, error } = db.useQuery(
     currentStore?.id ? {
@@ -58,16 +59,20 @@ export function useFiles(options: UseFilesOptions = {}): UseFilesResult {
 
   // Upload file function
   const uploadFile = async (
-    file: any, 
+    file: any,
     uploadOptions: { reference?: string; title?: string; alt?: string } = {}
   ) => {
     if (!currentStore) {
       return { success: false, error: 'No store selected' };
     }
 
+    if (!user) {
+      return { success: false, error: 'User must be authenticated to upload files' };
+    }
+
     const fileUploadOptions = {
       storeId: currentStore.id,
-      userId: currentStore.peopleaId || currentStore.id,
+      userId: user.id,
       category: 'general',
       reference: uploadOptions.reference || options.reference || '',
       title: uploadOptions.title || file.name || `file_${Date.now()}`,
@@ -87,9 +92,13 @@ export function useFiles(options: UseFilesOptions = {}): UseFilesResult {
       return { success: false, error: 'No store selected' };
     }
 
+    if (!user) {
+      return { success: false, error: 'User must be authenticated to replace files' };
+    }
+
     const fileReplaceOptions = {
       storeId: currentStore.id,
-      userId: currentStore.peopleaId || currentStore.id,
+      userId: user.id,
       category: 'general',
       reference: replaceOptions.reference || options.reference || '',
       title: replaceOptions.title || newFile.name || `file_${Date.now()}`,
@@ -134,7 +143,8 @@ export function useFiles(options: UseFilesOptions = {}): UseFilesResult {
 // Hook specifically for file selection/management
 export function useFileSelection() {
   const { currentStore } = useStore();
-  
+  const { user } = db.useAuth();
+
   const { data: filesData, isLoading, error } = db.useQuery(
     currentStore?.id ? {
       files: {

@@ -3,12 +3,10 @@ import { View, Text, TouchableOpacity, Alert, TextInput, BackHandler, Modal, Scr
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { id } from '@instantdb/react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
 import { db, getCurrentTimestamp } from '../lib/instant';
-import { r2Service } from '../lib/r2-service';
 import R2Image from './ui/r2-image';
 import FileUpload from './ui/file-upload';
-import FileSelectionModal from './ui/file-selection-modal';
+import MediaSelectionModal from './ui/media-selection-modal';
 import ProductSelect from './product-select';
 import { useStore } from '../lib/store-context';
 import { fileManager } from '../lib/file-manager';
@@ -52,7 +50,7 @@ export default function CollectionFormScreen({ collection, onClose, onSave }: Co
   const [showUnsavedChangesModal, setShowUnsavedChangesModal] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
   const [showProductSelect, setShowProductSelect] = useState(false);
-  const [showFileSelection, setShowFileSelection] = useState(false);
+  const [showMediaSelection, setShowMediaSelection] = useState(false);
 
   // Handle Android back button
   useEffect(() => {
@@ -80,52 +78,16 @@ export default function CollectionFormScreen({ collection, onClose, onSave }: Co
     updateField('imageFileId', fileId); // Store file ID for reference
   };
 
-  const handleFileSelectionComplete = (files: any[]) => {
-    if (files.length > 0) {
-      const file = files[0];
-      updateField('image', file.url);
-      updateField('imageFileId', file.id);
+  const handleMediaSelectionComplete = (media: any[]) => {
+    if (media.length > 0) {
+      const selectedMedia = media[0];
+      updateField('image', selectedMedia.url);
+      updateField('imageFileId', selectedMedia.id);
     }
   };
 
-  const handleImageUpload = async () => {
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        setImageUploading(true);
-        const asset = result.assets[0];
-
-        try {
-          const mediaFile = {
-            uri: asset.uri,
-            name: asset.fileName || `collection_image_${Date.now()}.jpg`,
-            type: 'image/jpeg',
-            size: asset.fileSize,
-          };
-
-          const uploadResult = await r2Service.uploadFile(mediaFile, 'collections');
-          if (uploadResult.success && uploadResult.url) {
-            updateField('image', uploadResult.url);
-          } else {
-            Alert.alert('Error', uploadResult.error || 'Failed to upload image. Please try again.');
-          }
-        } catch (error) {
-          console.error('Failed to upload collection image:', error);
-          Alert.alert('Error', 'Failed to upload image. Please try again.');
-        } finally {
-          setImageUploading(false);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to pick collection image:', error);
-      Alert.alert('Error', 'Failed to select image. Please try again.');
-    }
+  const handleImageUpload = () => {
+    setShowMediaSelection(true);
   };
 
   const handleSave = async () => {
@@ -315,7 +277,7 @@ export default function CollectionFormScreen({ collection, onClose, onSave }: Co
                 Collection Image
               </Text>
               <TouchableOpacity
-                onPress={() => setShowFileSelection(true)}
+                onPress={() => setShowMediaSelection(true)}
                 style={{
                   paddingHorizontal: 12,
                   paddingVertical: 6,
@@ -592,13 +554,12 @@ export default function CollectionFormScreen({ collection, onClose, onSave }: Co
         </Modal>
       )}
 
-      {/* File Selection Modal */}
-      <FileSelectionModal
-        visible={showFileSelection}
-        onClose={() => setShowFileSelection(false)}
-        onSelect={handleFileSelectionComplete}
+      {/* Media Selection Modal */}
+      <MediaSelectionModal
+        visible={showMediaSelection}
+        onClose={() => setShowMediaSelection(false)}
+        onSelect={handleMediaSelectionComplete}
         allowMultiple={false}
-        acceptedTypes="images"
         title="Select Collection Image"
       />
     </View>

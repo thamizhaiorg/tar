@@ -1,19 +1,17 @@
-import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { View, Text, TouchableOpacity, Alert, TextInput, BackHandler, Modal, Animated, ScrollView, Keyboard, Platform, KeyboardAvoidingView, StyleSheet } from 'react-native';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { View, Text, TouchableOpacity, Alert, TextInput, BackHandler, Modal, ScrollView, Keyboard, Platform, KeyboardAvoidingView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { id } from '@instantdb/react-native';
 import { MaterialIcons, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
 
 
 import Input from './ui/Input';
 import QuantitySelector from './ui/qty';
 import FileUpload from './ui/file-upload';
-import FileSelectionModal from './ui/file-selection-modal';
+import MediaSelectionModal from './ui/media-selection-modal';
 
 import R2Image from './ui/r2-image';
 import { db, getCurrentTimestamp } from '../lib/instant';
-import { MediaManager, MediaItem } from './media';
 import { useStore } from '../lib/store-context';
 import { fileManager } from '../lib/file-manager';
 import { createDefaultLocation } from '../lib/inventory-setup';
@@ -191,14 +189,11 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
   const [showLabelSkuDrawer, setShowLabelSkuDrawer] = useState(false);
   const [showStatusDrawer, setShowStatusDrawer] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
-  const [primaryImageUploading, setPrimaryImageUploading] = useState(false);
-  const [mediasUploading, setMediasUploading] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
-  const [showFileSelection, setShowFileSelection] = useState(false);
-  const [currentFileField, setCurrentFileField] = useState<'image' | 'medias'>('image');
+  const [showMediaSelection, setShowMediaSelection] = useState(false);
+  const [currentMediaField, setCurrentMediaField] = useState<'image' | 'medias'>('image');
 
-  const rotateAnim = useRef(new Animated.Value(0)).current;
   const [selectedOptionSet, setSelectedOptionSet] = useState<string | null>(null);
   const [selectedOptionValues, setSelectedOptionValues] = useState<string[]>([]);
 
@@ -272,22 +267,7 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
 
 
 
-  // Rotation animation for loading
-  useEffect(() => {
-    if (primaryImageUploading) {
-      const rotate = Animated.loop(
-        Animated.timing(rotateAnim, {
-          toValue: 1,
-          duration: 1000,
-          useNativeDriver: true,
-        })
-      );
-      rotate.start();
-      return () => rotate.stop();
-    } else {
-      rotateAnim.setValue(0);
-    }
-  }, [primaryImageUploading, rotateAnim]);
+
 
   // Update selectedCollectionId when productCollection changes
   useEffect(() => {
@@ -1062,108 +1042,33 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
     }
   };
 
-  const handleFileSelectionComplete = (files: any[]) => {
-    if (files.length > 0) {
-      const file = files[0]; // For primary image, take first file
-      if (currentFileField === 'image') {
-        updateField('image', file.url);
-        updateField('imageFileId', file.id);
-      }
+  const handleMediaSelectionComplete = (media: any[]) => {
+    if (currentMediaField === 'image' && media.length > 0) {
+      const selectedMedia = media[0]; // For primary image, take first media
+      updateField('image', selectedMedia.url);
+      updateField('imageFileId', selectedMedia.id);
+    } else if (currentMediaField === 'medias') {
+      // Convert media items to the format expected by MediaManager
+      const mediaItems = media.map(m => ({
+        url: m.url,
+        fileId: m.id,
+        name: m.title,
+        type: m.type
+      }));
+      updateField('medias', mediaItems);
     }
   };
 
-  const openFileSelection = (field: 'image' | 'medias') => {
-    setCurrentFileField(field);
-    setShowFileSelection(true);
+  const openMediaSelection = (field: 'image' | 'medias') => {
+    setCurrentMediaField(field);
+    setShowMediaSelection(true);
   };
 
-  const handlePrimaryImageUpload = async () => {
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        setPrimaryImageUploading(true);
-        const asset = result.assets[0];
-
-        try {
-          const mediaFile = {
-            uri: asset.uri,
-            name: asset.fileName || `primary_image_${Date.now()}.jpg`,
-            type: 'image/jpeg',
-            size: asset.fileSize,
-          };
-
-          const uploadResult = await r2Service.uploadFile(mediaFile, 'products');
-          if (uploadResult.success && uploadResult.url) {
-            updateField('image', uploadResult.url);
-          } else {
-            Alert.alert('Error', uploadResult.error || 'Failed to upload image. Please try again.');
-          }
-        } catch (error) {
-          console.error('Failed to upload primary image:', error);
-          Alert.alert('Error', 'Failed to upload image. Please try again.');
-        } finally {
-          setPrimaryImageUploading(false);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to pick primary image:', error);
-      Alert.alert('Error', 'Failed to select image. Please try again.');
-    }
+  const handlePrimaryImageUpload = () => {
+    openMediaSelection('image');
   };
 
-  const handleMediasUpload = async () => {
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        allowsMultipleSelection: true,
-        quality: 0.8,
-      });
 
-      if (!result.canceled && result.assets.length > 0) {
-        setMediasUploading(true);
-
-        try {
-          const newMediaItems = [];
-          for (const asset of result.assets) {
-            const mediaFile = {
-              uri: asset.uri,
-              name: asset.fileName || `media_${Date.now()}.jpg`,
-              type: 'image/jpeg',
-              size: asset.fileSize,
-            };
-
-            const uploadResult = await r2Service.uploadFile(mediaFile, 'products');
-            if (uploadResult.success && uploadResult.url) {
-              newMediaItems.push({
-                url: uploadResult.url,
-                key: uploadResult.key,
-                type: 'image/jpeg',
-              });
-            }
-          }
-
-          if (newMediaItems.length > 0) {
-            const updatedMedias = [...(formData.medias || []), ...newMediaItems];
-            updateField('medias', updatedMedias);
-          }
-        } catch (error) {
-          console.error('Failed to upload medias:', error);
-          Alert.alert('Error', 'Failed to upload images. Please try again.');
-        } finally {
-          setMediasUploading(false);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to pick medias:', error);
-      Alert.alert('Error', 'Failed to select images. Please try again.');
-    }
-  };
 
   const handleSave = async () => {
     if (!formData.title.trim()) {
@@ -1334,32 +1239,7 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
                 }}
                 onPress={() => setShowFullScreenImageDrawer(true)}
               >
-                {primaryImageUploading ? (
-                  <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-                    <Animated.View
-                      style={{
-                        transform: [{
-                          rotate: rotateAnim.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: ['0deg', '360deg'],
-                          }),
-                        }],
-                      }}
-                    >
-                      <View style={{
-                        width: 24,
-                        height: 24,
-                        borderRadius: 12,
-                        borderWidth: 2,
-                        borderColor: '#E5E7EB',
-                        borderTopColor: '#9CA3AF',
-                      }} />
-                    </Animated.View>
-                    <Text style={{ color: '#6B7280', fontSize: 10, marginTop: 4, textAlign: 'center' }}>
-                      Uploading...
-                    </Text>
-                  </View>
-                ) : formData.image && !imageError ? (
+                {formData.image && !imageError ? (
                   <R2Image
                     url={formData.image}
                     style={{ width: '100%', height: '100%' }}
@@ -2229,29 +2109,7 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
                 onPress={formData.image && !imageError ? () => setShowPrimaryImageActions(true) : handlePrimaryImageUpload}
                 activeOpacity={0.8}
               >
-                {primaryImageUploading ? (
-                  <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-                    <Animated.View
-                      style={{
-                        transform: [{
-                          rotate: rotateAnim.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: ['0deg', '360deg'],
-                          }),
-                        }],
-                      }}
-                    >
-                      <View style={{
-                        width: 20,
-                        height: 20,
-                        borderRadius: 10,
-                        borderWidth: 2,
-                        borderColor: '#E5E7EB',
-                        borderTopColor: '#6B7280',
-                      }} />
-                    </Animated.View>
-                  </View>
-                ) : formData.image && !imageError ? (
+                {formData.image && !imageError ? (
                   <R2Image
                     url={formData.image}
                     style={{ width: 140, height: 140 }}
@@ -2272,19 +2130,66 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
             </View>
 
             {/* Medias Section */}
-            <View>
-              <MediaManager
-                initialMedia={formData.medias}
-                onMediaChange={handleMediaChange}
-                maxItems={10}
-                allowMultiple={true}
-                prefix="products"
-                title=""
-                description=""
-                useCustomUpload={true}
-                onCustomUpload={handleMediasUpload}
-                customUploading={mediasUploading}
-              />
+            <View style={{ marginBottom: 24 }}>
+              <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827', marginBottom: 12 }}>
+                Media Gallery
+              </Text>
+
+              {/* Media Grid */}
+              {formData.medias && formData.medias.length > 0 ? (
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+                  {formData.medias.map((media: any, index: number) => (
+                    <View key={index} style={{ position: 'relative' }}>
+                      <R2Image
+                        url={media.url}
+                        style={{ width: 80, height: 80, borderRadius: 8 }}
+                        resizeMode="cover"
+                      />
+                      <TouchableOpacity
+                        onPress={() => {
+                          const newMedias = formData.medias.filter((_: any, i: number) => i !== index);
+                          updateField('medias', newMedias);
+                        }}
+                        style={{
+                          position: 'absolute',
+                          top: -8,
+                          right: -8,
+                          backgroundColor: '#EF4444',
+                          borderRadius: 12,
+                          width: 24,
+                          height: 24,
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        <MaterialIcons name="close" size={16} color="white" />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
+
+              {/* Add Media Button */}
+              <TouchableOpacity
+                onPress={() => openMediaSelection('medias')}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: '#F3F4F6',
+                  borderRadius: 8,
+                  paddingVertical: 16,
+                  paddingHorizontal: 20,
+                  borderWidth: 1,
+                  borderColor: '#E5E7EB',
+                  borderStyle: 'dashed'
+                }}
+              >
+                <MaterialIcons name="add-photo-alternate" size={24} color="#6B7280" />
+                <Text style={{ marginLeft: 8, fontSize: 16, color: '#6B7280', fontWeight: '500' }}>
+                  {formData.medias && formData.medias.length > 0 ? 'Add More Images' : 'Add Images'}
+                </Text>
+              </TouchableOpacity>
             </View>
           </ScrollView>
         </View>
@@ -3004,14 +2909,13 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
         }}
       />
 
-      {/* File Selection Modal */}
-      <FileSelectionModal
-        visible={showFileSelection}
-        onClose={() => setShowFileSelection(false)}
-        onSelect={handleFileSelectionComplete}
-        allowMultiple={currentFileField === 'medias'}
-        acceptedTypes="images"
-        title={currentFileField === 'image' ? 'Select Product Image' : 'Select Media Files'}
+      {/* Media Selection Modal */}
+      <MediaSelectionModal
+        visible={showMediaSelection}
+        onClose={() => setShowMediaSelection(false)}
+        onSelect={handleMediaSelectionComplete}
+        allowMultiple={currentMediaField === 'medias'}
+        title={currentMediaField === 'image' ? 'Select Product Image' : 'Select Media Images'}
       />
 
     </View>

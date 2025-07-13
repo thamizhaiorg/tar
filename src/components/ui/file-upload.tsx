@@ -38,6 +38,7 @@ export default function FileUpload({
   style
 }: FileUploadProps) {
   const { currentStore } = useStore();
+  const { user } = db.useAuth();
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [dragActive, setDragActive] = useState(false);
@@ -132,10 +133,14 @@ export default function FileUpload({
     onUploadStart?.();
 
     try {
+      if (!user) {
+        throw new Error('User must be authenticated to upload files');
+      }
+
       // Use file manager for upload
       const uploadOptions = {
         storeId: currentStore.id,
-        userId: currentStore.peopleaId || currentStore.id, // Use store owner or store ID
+        userId: user.id,
         category: acceptedTypes === 'images' ? 'images' :
                  acceptedTypes === 'videos' ? 'videos' :
                  acceptedTypes === 'documents' ? 'documents' : 'general',

@@ -14,11 +14,12 @@ export interface FileRecord {
   reference?: string;
   dateAdded: Date;
   storeId: string;
+  userId?: string;
 }
 
 export interface FileUploadOptions {
   storeId: string;
-  userId: string;
+  userId?: string;
   category: string;
   reference?: string;
   title?: string;
@@ -50,7 +51,8 @@ export class FileManager {
       size: file.size || 0,
       reference: options.reference || '',
       dateAdded: getCurrentTimestamp(),
-      storeId: options.storeId
+      storeId: options.storeId,
+      ...(options.userId && { userId: options.userId })
     };
 
     await db.transact([
