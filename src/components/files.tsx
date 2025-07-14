@@ -29,7 +29,7 @@ interface FileItem {
 }
 
 export default function FilesScreen({ onClose }: FilesScreenProps) {
-  log.debug('Component rendered', 'FilesScreen');
+  // log.debug('Component rendered', 'FilesScreen');
 
   const insets = useSafeAreaInsets();
 
@@ -43,21 +43,7 @@ export default function FilesScreen({ onClose }: FilesScreenProps) {
   // Use the files hook for real-time data
   const { files, isLoading, error, searchFiles } = useFileSelection();
 
-  // Log files data for debugging
-  useEffect(() => {
-    log.debug('Files screen data loaded', 'FilesScreen', {
-      filesCount: files.length,
-      files: files.map(f => ({
-        id: f.id,
-        title: f.title,
-        url: f.url,
-        type: f.type,
-        size: f.size
-      })),
-      isLoading,
-      error
-    });
-  }, [files, isLoading, error]);
+  // Removed R2 logs
 
   // Filter and search files using the hook - optimized with performance monitoring
   const filteredFiles = useMemo(() => {

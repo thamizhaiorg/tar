@@ -36,20 +36,7 @@ export default function OptionSetEditScreen({ setId, setName, onClose }: OptionS
   const [showIdentifierEdit, setShowIdentifierEdit] = useState(false);
   const [editingValueId, setEditingValueId] = useState<string>('');
 
-  // Handle native back button
-  useEffect(() => {
-    const backAction = () => {
-      onClose();
-      return true;
-    };
-
-    const backHandler = BackHandler.addEventListener(
-      'hardwareBackPress',
-      backAction,
-    );
-
-    return () => backHandler.remove();
-  }, [onClose]);
+  // ...existing code...
 
   // Load existing data
   const { data } = db.useQuery(
@@ -63,8 +50,7 @@ export default function OptionSetEditScreen({ setId, setName, onClose }: OptionS
     } : {}
   );
 
-  console.log('Option Set Edit - Query params:', { isNewSet, storeId: currentStore?.id, setId });
-  console.log('Option Set Edit - Raw data:', data);
+  // ...removed debug log...
 
   // Handle case where tables don't exist yet
   const safeData = React.useMemo(() => {
@@ -73,7 +59,7 @@ export default function OptionSetEditScreen({ setId, setName, onClose }: OptionS
       opsets: data.opsets || [],
       opvalues: data.opvalues || []
     };
-    console.log('SafeData:', result);
+    // ...removed debug log...
     return result;
   }, [data]);
 
@@ -91,7 +77,7 @@ export default function OptionSetEditScreen({ setId, setName, onClose }: OptionS
             setCurrentGroup('Group 1');
           }
         } catch (error) {
-          console.error('Error loading last selected group:', error);
+      // ...removed debug log...
           // Fallback to first group
           setCurrentGroup('Group 1');
         }
@@ -118,13 +104,13 @@ export default function OptionSetEditScreen({ setId, setName, onClose }: OptionS
         .sort((a: any, b: any) => a.order - b.order);
 
       setValues(loadedValues);
-      console.log('Loaded values:', loadedValues);
+      // ...removed debug log...
 
       // Set current group to the first group that has values
       if (loadedValues.length > 0) {
         const firstGroupWithValues = loadedValues[0].group;
         setCurrentGroup(firstGroupWithValues);
-        console.log('Set current group to:', firstGroupWithValues);
+        // ...removed debug log...
       }
     }
   }, [safeData]);
@@ -199,7 +185,7 @@ export default function OptionSetEditScreen({ setId, setName, onClose }: OptionS
 
       onClose();
     } catch (error) {
-      console.error('Error saving option set:', error);
+      // ...removed debug log...
       Alert.alert('Error', 'Failed to save option set');
     }
   };
@@ -236,7 +222,7 @@ export default function OptionSetEditScreen({ setId, setName, onClose }: OptionS
         const key = `last_selected_group_${currentStore.id}`;
         await AsyncStorage.setItem(key, group);
       } catch (error) {
-        console.error('Error saving selected group:', error);
+        // ...removed debug log...
       }
     }
   };
@@ -438,9 +424,7 @@ export default function OptionSetEditScreen({ setId, setName, onClose }: OptionS
       <FlatList
         data={(() => {
           const filtered = values.filter(value => value.group === currentGroup);
-          console.log('Current Group:', currentGroup);
-          console.log('All Values:', values);
-          console.log('Filtered Values:', filtered);
+          // ...removed debug log...
           return filtered;
         })()}
         renderItem={renderValue}

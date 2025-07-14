@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, Alert, Modal, Animated, BackHandler } from 'react-native';
+import React, { useState, useCallback, useMemo } from 'react';
+import { View, Text, TextInput, TouchableOpacity, FlatList, Alert, Modal, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { db, formatCurrency } from '../lib/instant';
@@ -126,19 +126,7 @@ export default function ProductsScreen({ isGridView = false, onProductFormOpen, 
   const [showBottomDrawer, setShowBottomDrawer] = useState(false);
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
 
-  // Handle back navigation
-  useEffect(() => {
-    const backAction = () => {
-      if (onClose) {
-        onClose();
-        return true;
-      }
-      return false;
-    };
-
-    const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
-    return () => backHandler.remove();
-  }, [onClose]);
+  // Removed custom BackHandler logic to allow default navigation behavior
 
   // Query products with their items filtered by current store
   const { isLoading, error, data } = db.useQuery(

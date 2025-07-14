@@ -31,11 +31,7 @@ export function useFiles(options: UseFilesOptions = {}): UseFilesResult {
     }
   } : {};
 
-  log.debug('useFiles hook database query', 'useFiles', {
-    currentStoreId: currentStore?.id,
-    query,
-    hasCurrentStore: !!currentStore
-  });
+  // Removed debug log
 
   const { data: filesData, isLoading, error } = db.useQuery(query);
 
@@ -43,64 +39,20 @@ export function useFiles(options: UseFilesOptions = {}): UseFilesResult {
 
   // Log files data for debugging
   useEffect(() => {
-    log.debug('useFiles hook query result', 'useFiles', {
-      currentStoreId: currentStore?.id,
-      filesData,
-      allFilesCount: allFiles.length,
-      allFiles: allFiles.map(f => ({
-        id: f.id,
-        title: f.title,
-        url: f.url,
-        type: f.type,
-        size: f.size,
-        storeId: f.storeId,
-        reference: f.reference
-      })),
-      isLoading,
-      error,
-      options
-    });
-
-    // Log specific details about image files
-    const imageFiles = allFiles.filter(f => f.type.startsWith('image/'));
-    if (imageFiles.length > 0) {
-      log.debug('Image files found', 'useFiles', {
-        imageCount: imageFiles.length,
-        imageFiles: imageFiles.map(f => ({
-          id: f.id,
-          title: f.title,
-          url: f.url,
-          type: f.type
-        }))
-      });
-    } else {
-      log.debug('No image files found', 'useFiles');
-    }
+    // Removed debug logs
   }, [allFiles.length, currentStore?.id, isLoading, error, options]);
 
   // Filter files based on options
   const files = useMemo(() => {
     let filtered = allFiles;
-
-    console.log('🔍 useFiles HOOK: Starting filter process:', {
-      originalCount: allFiles.length,
-      options,
-      allFiles: allFiles.map(f => ({ id: f.id, title: f.title, type: f.type, reference: f.reference }))
-    });
-
+    // Removed debug logs
     // Filter by reference
     if (options.reference) {
       filtered = filtered.filter(file => file.reference === options.reference);
-      console.log('📎 useFiles HOOK: After reference filter:', {
-        reference: options.reference,
-        filteredCount: filtered.length,
-        filtered: filtered.map(f => ({ id: f.id, title: f.title, reference: f.reference }))
-      });
     }
 
     // Filter by type
     if (options.type && options.type !== 'all') {
-      const beforeTypeFilter = filtered.length;
       filtered = filtered.filter(file => {
         if (options.type === 'images') {
           return file.type.startsWith('image/') || file.type === 'image';
@@ -116,23 +68,10 @@ export function useFiles(options: UseFilesOptions = {}): UseFilesResult {
         }
         return true;
       });
-
-      console.log('🎯 useFiles HOOK: After type filter:', {
-        type: options.type,
-        beforeCount: beforeTypeFilter,
-        afterCount: filtered.length,
-        filtered: filtered.map(f => ({ id: f.id, title: f.title, type: f.type }))
-      });
     }
 
     // Sort by date added (newest first)
     const sorted = filtered.sort((a, b) => new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime());
-
-    console.log('✅ useFiles HOOK: Final result:', {
-      finalCount: sorted.length,
-      finalFiles: sorted.map(f => ({ id: f.id, title: f.title, url: f.url, type: f.type }))
-    });
-
     return sorted;
   }, [allFiles, options.reference, options.type]);
 
@@ -230,11 +169,7 @@ export function useFileSelection() {
     }
   } : {};
 
-  console.log('🔍 useFileSelection HOOK: Database query:', {
-    currentStoreId: currentStore?.id,
-    query,
-    hasCurrentStore: !!currentStore
-  });
+  // Removed debug log
 
   const { data: filesData, isLoading, error } = db.useQuery(query);
 
@@ -242,38 +177,7 @@ export function useFileSelection() {
 
   // Log file selection data for debugging
   useEffect(() => {
-    log.debug('useFileSelection hook query result', 'useFileSelection', {
-      currentStoreId: currentStore?.id,
-      filesData,
-      filesCount: files.length,
-      files: files.map(f => ({
-        id: f.id,
-        title: f.title,
-        url: f.url,
-        type: f.type,
-        size: f.size,
-        storeId: f.storeId,
-        reference: f.reference
-      })),
-      isLoading,
-      error
-    });
-
-    // Log specific details about image files
-    const imageFiles = files.filter(f => f.type.startsWith('image/'));
-    if (imageFiles.length > 0) {
-      log.debug('Image files found in file selection', 'useFileSelection', {
-        imageCount: imageFiles.length,
-        imageFiles: imageFiles.map(f => ({
-          id: f.id,
-          title: f.title,
-          url: f.url,
-          type: f.type
-        }))
-      });
-    } else {
-      log.debug('No image files found in file selection', 'useFileSelection');
-    }
+    // Removed debug logs
   }, [files.length, currentStore?.id, isLoading, error]);
 
   const getFilesByType = (type: 'images' | 'videos' | 'documents' | 'all') => {
@@ -298,30 +202,14 @@ export function useFileSelection() {
 
   const searchFiles = (query: string, type: 'images' | 'videos' | 'documents' | 'all' = 'all') => {
     const filteredFiles = getFilesByType(type);
-
-    console.log('🔍 useFileSelection HOOK: searchFiles called:', {
-      query,
-      type,
-      totalFiles: files.length,
-      filteredByType: filteredFiles.length,
-      filteredFiles: filteredFiles.map(f => ({ id: f.id, title: f.title, type: f.type }))
-    });
-
+    // Removed debug logs
     if (!query.trim()) return filteredFiles;
-
     const searchQuery = query.toLowerCase();
     const searchResult = filteredFiles.filter(file =>
       file.title.toLowerCase().includes(searchQuery) ||
       file.alt?.toLowerCase().includes(searchQuery) ||
       file.reference?.toLowerCase().includes(searchQuery)
     );
-
-    console.log('🔍 useFileSelection HOOK: searchFiles result:', {
-      query,
-      searchResultCount: searchResult.length,
-      searchResult: searchResult.map(f => ({ id: f.id, title: f.title }))
-    });
-
     return searchResult;
   };
 

@@ -28,7 +28,7 @@ export class NavigationService {
 
   private constructor() {
     this.navigationState = {
-      screen: 'space',
+      screen: 'menu',
       showBottomTabs: true,
       activeBottomTab: 'workspace',
       showManagement: false,
@@ -81,8 +81,8 @@ export class NavigationService {
   // Go back to previous screen (simplified implementation)
   goBack(): void {
     // This could be enhanced with a navigation stack
-    if (this.navigationState.screen !== 'space') {
-      this.navigate('space');
+    if (this.navigationState.screen !== 'menu') {
+      this.navigate('menu');
     }
   }
 

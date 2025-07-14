@@ -39,7 +39,7 @@ export default function PrimaryImageSelectionModal({
   title = 'Select Primary Image',
   reference
 }: PrimaryImageSelectionModalProps) {
-  log.debug('Component rendered', 'PrimaryImageSelectionModal', { visible, reference });
+  // log.debug('Component rendered', 'PrimaryImageSelectionModal', { visible, reference });
 
   const insets = useSafeAreaInsets();
   const { currentStore } = useStore();
@@ -51,20 +51,7 @@ export default function PrimaryImageSelectionModal({
   // Use the files hook to get images only
   const { files, uploadFile } = useFiles({ type: 'images' });
 
-  // Log files data for debugging
-  useEffect(() => {
-    log.debug('Primary image modal files data', 'PrimaryImageModal', {
-      filesCount: files.length,
-      files: files.map(f => ({
-        id: f.id,
-        title: f.title,
-        url: f.url,
-        type: f.type,
-        size: f.size
-      })),
-      visible
-    });
-  }, [files.length, files, visible]);
+  // Removed R2 logs
 
   // Handle native back button
   useEffect(() => {

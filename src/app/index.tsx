@@ -31,7 +31,20 @@ import { Product, Collection, Item } from "../lib/instant";
 import ErrorBoundary from "../components/ui/error-boundary";
 
 
-type Screen = 'space' | 'sales' | 'reports' | 'products' | 'collections' | 'options' | 'metafields' | 'menu' | 'option-create' | 'option-edit' | 'items' | 'locations' | 'files';
+type Screen =
+  | 'space'
+  | 'sales'
+  | 'reports'
+  | 'products'
+  | 'collections'
+  | 'options'
+  | 'metafields'
+  | 'menu'
+  | 'option-create'
+  | 'option-edit'
+  | 'items'
+  | 'locations'
+  | 'files';
 
 interface NavigationData {
   productId?: string;
@@ -49,7 +62,7 @@ interface NavigationState {
 
 export default function Page() {
   const { user, isLoading } = useAuth();
-  const [currentScreen, setCurrentScreen] = useState<Screen>('space');
+  const [currentScreen, setCurrentScreen] = useState<Screen>('menu');
   const [activeBottomTab, setActiveBottomTab] = useState<BottomTab>('workspace');
   const [showBottomTabs, setShowBottomTabs] = useState(true); // Start untoggled (bottom tabs shown, square icon not highlighted)
   const [isGridView, setIsGridView] = useState(false); // false = list view (default), true = grid view
@@ -66,7 +79,7 @@ export default function Page() {
 
   // Navigation stack to track navigation history
   const [navigationStack, setNavigationStack] = useState<NavigationState[]>([{
-    screen: 'space',
+    screen: 'menu',
     showBottomTabs: true,
     activeBottomTab: 'workspace',
     showManagement: false
@@ -160,8 +173,8 @@ export default function Page() {
         if (didGoBack) {
           return true;
         }
-        // If no navigation history, go to space
-        setCurrentScreen('space');
+        // If no navigation history, go to menu
+        setCurrentScreen('menu');
         setShowBottomTabs(true);
         setActiveBottomTab('workspace');
         setShowManagement(false);
@@ -175,12 +188,12 @@ export default function Page() {
       }
 
       // If on space and no navigation history, allow default back behavior (exit app)
-      if (currentScreen === 'space') {
+      if (currentScreen === 'menu') {
         return false;
       }
 
-      // Fallback: if navigation stack is empty or failed, go to space
-      setCurrentScreen('space');
+      // Fallback: if navigation stack is empty or failed, go to menu
+      setCurrentScreen('menu');
       setShowBottomTabs(true);
       setActiveBottomTab('workspace');
       setShowManagement(false);
@@ -522,25 +535,7 @@ function MenuScreen({ onNavigate }: { onNavigate: (screen: Screen) => void }) {
 
         {/* Main Navigation Cards */}
         <View className="gap-4">
-          <TouchableOpacity
-            onPress={() => onNavigate('space')}
-            className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm"
-          >
-            <View className="flex-row items-center">
-              <View className="w-12 h-12 bg-blue-100 rounded-xl items-center justify-center mr-4">
-                <Text className="text-xl">🎈</Text>
-              </View>
-              <View className="flex-1">
-                <Text className="text-xl font-semibold text-gray-900 mb-1">
-                  Space
-                </Text>
-                <Text className="text-gray-600">
-                  Sales metrics and analytics
-                </Text>
-              </View>
-              <Text className="text-gray-400 text-xl">›</Text>
-            </View>
-          </TouchableOpacity>
+          {/* Removed Space navigation card to ensure all navigation to Sales is from Menu */}
 
           <TouchableOpacity
             onPress={() => onNavigate('sales')}

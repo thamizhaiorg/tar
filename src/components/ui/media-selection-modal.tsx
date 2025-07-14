@@ -41,7 +41,7 @@ export default function MediaSelectionModal({
   selectedMedia = [],
   reference
 }: MediaSelectionModalProps) {
-  console.log('📱 MEDIA MODAL: Component rendered', { visible, reference });
+  // console.log('📱 MEDIA MODAL: Component rendered', { visible, reference });
 
   const insets = useSafeAreaInsets();
   const { currentStore } = useStore();
@@ -54,20 +54,7 @@ export default function MediaSelectionModal({
   // Use the files hook to get images only
   const { files, uploadFile } = useFiles({ type: 'images' });
 
-  // Log files data for debugging
-  useEffect(() => {
-    log.debug('Media selection modal files data', 'MediaSelectionModal', {
-      filesCount: files.length,
-      files: files.map(f => ({
-        id: f.id,
-        title: f.title,
-        url: f.url,
-        type: f.type,
-        size: f.size
-      })),
-      visible
-    });
-  }, [files.length, files, visible]);
+  // Removed R2 logs
 
   // Handle native back button
   useEffect(() => {

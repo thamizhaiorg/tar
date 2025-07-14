@@ -18,15 +18,7 @@ export const r2Config: R2Config = {
   endpoint: Constants.expoConfig?.extra?.R2_ENDPOINT || process.env.EXPO_PUBLIC_R2_ENDPOINT || '',
 };
 
-// Log configuration on load (without sensitive data)
-console.log('⚙️ R2Config: Configuration loaded:', {
-  accountId: r2Config.accountId ? '***' : 'MISSING',
-  accessKeyId: r2Config.accessKeyId ? '***' : 'MISSING',
-  secretAccessKey: r2Config.secretAccessKey ? '***' : 'MISSING',
-  bucketName: r2Config.bucketName || 'MISSING',
-  region: r2Config.region,
-  endpoint: r2Config.endpoint || 'MISSING'
-});
+// ...removed debug log...
 
 // Validate configuration
 export const validateR2Config = (): boolean => {
@@ -37,7 +29,7 @@ export const validateR2Config = (): boolean => {
 // Get public URL for uploaded files
 export const getPublicUrl = (key: string): string => {
   const url = `${r2Config.endpoint}/${key}`;
-  console.log('🌐 R2Config: Generated public URL:', { key, endpoint: r2Config.endpoint, url });
+  // ...removed debug log...
   return url;
 };
 

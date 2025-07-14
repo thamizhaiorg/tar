@@ -25,14 +25,14 @@ class R2Service {
   }
 
   private initializeClient() {
-    console.log('🔧 R2Service: Initializing client...');
+    // ...removed debug log...
 
     if (!validateR2Config()) {
       console.error('❌ R2Service: R2 configuration is incomplete');
       return;
     }
 
-    console.log('✅ R2Service: Configuration validated, creating S3Client');
+    // ...removed debug log...
 
     this.client = new S3Client({
       region: r2Config.region,
@@ -44,25 +44,22 @@ class R2Service {
       forcePathStyle: true, // Required for R2
     });
 
-    console.log('✅ R2Service: S3Client created successfully');
+    // ...removed debug log...
   }
 
   async uploadFile(file: MediaFile, prefix: string = 'media'): Promise<UploadResult> {
     if (!this.client) {
-      log.error('R2 client not initialized', 'R2Service');
+      // Removed error log
       return { success: false, error: 'R2 client not initialized' };
     }
 
-    log.info(`Starting file upload: ${file.name}`, 'R2Service', {
-      size: file.size,
-      type: file.type
-    });
+    // Removed info log
 
     try {
-      return await PerformanceMonitor.measureAsync('r2-upload', async () => {
+      return await (async () => {
         // Generate unique key for the file
         const key = generateFileKey(file.name, prefix);
-        log.debug(`Generated file key: ${key}`, 'R2Service');
+        // Removed debug log
 
       // Read file content - use different approach for React Native
       const response = await fetch(file.uri);
@@ -118,14 +115,8 @@ class R2Service {
 
         // Return success with public URL
         const url = getPublicUrl(key);
-        console.log('✅ R2Service: File uploaded successfully:', {
-          key,
-          url,
-          fileName: file.name,
-          fileType: file.type,
-          bucketName: r2Config.bucketName
-        });
-        log.info(`File uploaded successfully: ${key}`, 'R2Service', { url });
+        // ...removed debug log...
+        // Removed info log
         return { success: true, url, key };
       });
 
@@ -143,11 +134,11 @@ class R2Service {
 
   async deleteFile(key: string): Promise<boolean> {
     if (!this.client) {
-      log.error('R2 client not initialized', 'R2Service');
+      // Removed error log
       return false;
     }
 
-    log.info(`Deleting file: ${key}`, 'R2Service');
+    // Removed info log
 
     try {
       const command = new DeleteObjectCommand({
@@ -156,7 +147,7 @@ class R2Service {
       });
 
       await this.client.send(command);
-      log.info(`File deleted successfully: ${key}`, 'R2Service');
+      // Removed info log
       return true;
 
     } catch (error) {
@@ -199,13 +190,13 @@ class R2Service {
   // Extract key from URL
   extractKeyFromUrl(url: string): string | null {
     try {
-      console.log('🔑 R2Service: Extracting key from URL:', url);
+      // ...removed debug log...
       const urlObj = new URL(url);
       const key = urlObj.pathname.substring(1); // Remove leading slash
-      console.log('🔑 R2Service: Extracted key:', key);
+      // ...removed debug log...
       return key;
     } catch (error) {
-      console.log('❌ R2Service: Failed to extract key from URL:', { url, error });
+      // ...removed debug log...
       return null;
     }
   }
@@ -247,15 +238,10 @@ class R2Service {
     category: string,
     reference?: string
   ): Promise<UploadResult> {
-    console.log('📤 R2Service: uploadFileWithStructuredPath called:', {
-      fileName: file.name,
-      userId,
-      category,
-      reference
-    });
+    // Removed console log
 
     const structuredPath = this.generateStructuredPath(userId, category, file.name, reference);
-    console.log('📤 R2Service: Generated structured path:', structuredPath);
+    // Removed console log
 
     // Use the structured path as the key directly
     return this.uploadFileWithCustomKey(file, structuredPath);
@@ -263,28 +249,19 @@ class R2Service {
 
   // Upload file with custom key (internal method)
   private async uploadFileWithCustomKey(file: MediaFile, key: string): Promise<UploadResult> {
-    console.log('📤 R2Service: uploadFileWithCustomKey called:', {
-      fileName: file.name,
-      key,
-      fileUri: file.uri,
-      fileType: file.type,
-      fileSize: file.size
-    });
+    // Removed console log
 
     if (!this.client) {
       console.error('❌ R2Service: R2 client not initialized');
-      log.error('R2 client not initialized', 'R2Service');
+      // Removed error log
       return { success: false, error: 'R2 client not initialized' };
     }
 
-    console.log('📤 R2Service: Starting file upload with custom key:', key);
-    log.info(`Starting file upload with custom key: ${key}`, 'R2Service', {
-      size: file.size,
-      type: file.type
-    });
+    // Removed console log
+    // Removed info log
 
     try {
-      return await PerformanceMonitor.measureAsync('r2-upload-custom', async () => {
+      return await (async () => {
         // Read file content - use different approach for React Native
         const response = await fetch(file.uri);
 
@@ -321,7 +298,7 @@ class R2Service {
 
         // Return success with public URL
         const url = getPublicUrl(key);
-        log.info(`File uploaded successfully with custom key: ${key}`, 'R2Service', { url });
+        // Removed info log
         return { success: true, url, key };
       });
 
@@ -340,7 +317,7 @@ class R2Service {
 
   // Generate signed URL for reading files (for private buckets)
   async getSignedUrl(key: string, expiresIn: number = 3600): Promise<string | null> {
-    console.log('🔐 R2Service: Generating signed URL for key:', { key, expiresIn });
+    // Removed console log
 
     if (!this.client) {
       console.error('❌ R2Service: R2 client not initialized');
@@ -353,10 +330,10 @@ class R2Service {
         Key: key,
       });
 
-      console.log('🔐 R2Service: Creating GetObjectCommand:', { bucket: r2Config.bucketName, key });
+      // Removed console log
 
       const signedUrl = await getSignedUrl(this.client, command, { expiresIn });
-      console.log('✅ R2Service: Generated signed URL:', signedUrl);
+      // Removed console log
       return signedUrl;
     } catch (error) {
       console.error('❌ R2Service: Failed to generate signed URL:', { key, error });
@@ -387,7 +364,7 @@ class R2Service {
       if (uploadResult.success) {
         // Delete old file after successful upload
         await this.deleteFile(oldKey);
-        log.info(`File replaced successfully: ${oldKey} -> ${uploadResult.key}`, 'R2Service');
+        // Removed info log
       }
 
       return uploadResult;

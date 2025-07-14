@@ -30,10 +30,10 @@ export default function R2Image({
 
   useEffect(() => {
     const loadSignedUrl = async () => {
-      log.debug('Starting to load URL', 'R2Image', { url });
+      // Removed debug log
 
       if (!url) {
-        log.warn('No URL provided', 'R2Image');
+        // Removed warn log
         setLoading(false);
         return;
       }
@@ -54,7 +54,7 @@ export default function R2Image({
         // Check cache first
         const cached = urlCache.get(url);
         if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-          console.log('✅ R2Image: Using cached URL:', { originalUrl: url, cachedUrl: cached.url });
+          // Removed console log
           setSignedUrl(cached.url);
           setLoading(false);
           return;
@@ -63,18 +63,18 @@ export default function R2Image({
         // Check if it's already a signed URL or public URL
         if (url.includes('X-Amz-Algorithm') || url.includes('Signature')) {
           // Already a signed URL
-          console.log('✅ R2Image: URL is already signed:', url);
+          // Removed console log
           setSignedUrl(url);
           // Cache it
           urlCache.set(url, { url, timestamp: Date.now() });
         } else {
           // Extract key from URL and generate signed URL
           const key = r2Service.extractKeyFromUrl(url);
-          console.log('🔑 R2Image: Extracted key from URL:', { url, key });
+          // Removed console log
 
           if (key) {
             const signed = await r2Service.getSignedUrl(key);
-            log.debug('Generated signed URL for R2 image', 'R2Image', { key, signed });
+            // Removed debug log
 
             if (!abortController.signal.aborted) {
               setSignedUrl(signed);
@@ -83,7 +83,7 @@ export default function R2Image({
             }
           } else {
             // Fallback to original URL
-            log.warn('No key found for R2 image, using original URL', 'R2Image', { url });
+            // Removed warn log
             if (!abortController.signal.aborted) {
               setSignedUrl(url);
               urlCache.set(url, { url, timestamp: Date.now() });
@@ -91,7 +91,7 @@ export default function R2Image({
           }
         }
       } catch (err) {
-        log.error('Error loading R2 image URL', 'R2Image', { url, error: err instanceof Error ? err.message : 'Unknown error' });
+        // Removed error log
         if (!abortController.signal.aborted) {
           setError(true);
           trackError(err as Error, 'R2Image', { url });
@@ -138,12 +138,12 @@ export default function R2Image({
       source={{ uri: signedUrl }}
       style={style}
       onError={(e) => {
-        log.error('R2 image component error', 'R2Image', { signedUrl, error: e });
+        // Removed error log
         setError(true);
         onError?.(e);
       }}
       onLoad={() => {
-        log.debug('R2 image component loaded successfully', 'R2Image', { signedUrl });
+        // Removed debug log
         onLoad?.();
       }}
     />

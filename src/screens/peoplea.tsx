@@ -41,20 +41,7 @@ export default function PeopleaScreen({ onClose }: PeopleaScreenProps) {
     }
   }, [peopleaProfile, user]);
 
-  // Handle Android back button
-  useEffect(() => {
-    const backAction = () => {
-      if (isEditing) {
-        handleCancelEdit();
-      } else {
-        onClose();
-      }
-      return true;
-    };
-
-    const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
-    return () => backHandler.remove();
-  }, [isEditing, onClose]);
+  // ...existing code...
 
   const handleSave = async () => {
     setIsSaving(true);

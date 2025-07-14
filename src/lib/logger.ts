@@ -129,7 +129,7 @@ export class PerformanceMonitor {
 
   static start(label: string) {
     this.timers.set(label, Date.now());
-    log.debug(`Performance timer started: ${label}`, 'Performance');
+    // Removed debug log
   }
 
   static end(label: string) {
@@ -137,10 +137,10 @@ export class PerformanceMonitor {
     if (startTime) {
       const duration = Date.now() - startTime;
       this.timers.delete(label);
-      log.info(`Performance timer ended: ${label} took ${duration}ms`, 'Performance');
+      // Removed info log
       return duration;
     }
-    log.warn(`Performance timer not found: ${label}`, 'Performance');
+    // Removed warn log
     return 0;
   }
 

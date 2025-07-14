@@ -38,22 +38,7 @@ export default function OptionValuesSelector({
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
 
-  // Handle native back button
-  useEffect(() => {
-    if (!visible) return;
-
-    const backAction = () => {
-      onClose();
-      return true;
-    };
-
-    const backHandler = BackHandler.addEventListener(
-      'hardwareBackPress',
-      backAction,
-    );
-
-    return () => backHandler.remove();
-  }, [visible, onClose]);
+  // ...existing code...
 
   // Reset selection when option set changes
   useEffect(() => {

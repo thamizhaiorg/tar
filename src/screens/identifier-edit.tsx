@@ -20,20 +20,7 @@ export default function IdentifierEditScreen({
   const [selectedType, setSelectedType] = useState<'text' | 'color' | 'image'>(currentType);
   const [value, setValue] = useState(currentValue);
 
-  // Handle native back button
-  useEffect(() => {
-    const backAction = () => {
-      onClose();
-      return true;
-    };
-
-    const backHandler = BackHandler.addEventListener(
-      'hardwareBackPress',
-      backAction,
-    );
-
-    return () => backHandler.remove();
-  }, [onClose]);
+  // ...existing code...
 
   const handleSave = () => {
     if (!value.trim()) return;

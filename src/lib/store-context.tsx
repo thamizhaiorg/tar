@@ -59,7 +59,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }
       }
     } catch (error) {
-      console.error('Error loading current store:', error);
+      // ...removed debug log...
     }
   };
 
@@ -86,7 +86,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             });
           }
         } catch (error) {
-          console.error('Error checking stored store:', error);
+          // ...removed debug log...
           // Fallback to first store
           await setCurrentStore({
             ...stores[0],
@@ -105,7 +105,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setCurrentStoreState(store);
       await AsyncStorage.setItem(CURRENT_STORE_KEY, store.id);
     } catch (error) {
-      console.error('Error saving current store:', error);
+      // ...removed debug log...
     }
   };
 
@@ -129,7 +129,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       // The new store will be automatically available through the query
       return { ...newStore, id: storeId } as Store;
     } catch (error) {
-      console.error('Error creating store:', error);
+      // ...removed debug log...
       throw error;
     }
   };
@@ -149,7 +149,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setCurrentStoreState({ ...currentStore, ...updates });
       }
     } catch (error) {
-      console.error('Error updating store:', error);
+      // ...removed debug log...
       throw error;
     }
   };
@@ -175,7 +175,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }
       }
     } catch (error) {
-      console.error('Error deleting store:', error);
+      // ...removed debug log...
       throw error;
     }
   };

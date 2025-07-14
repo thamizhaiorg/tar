@@ -21,20 +21,7 @@ export default function OptionSetsScreen({ onNavigateToEdit, onClose }: OptionSe
   const { currentStore } = useStore();
   const insets = useSafeAreaInsets();
 
-  // Handle native back button
-  useEffect(() => {
-    const backAction = () => {
-      onClose();
-      return true;
-    };
-
-    const backHandler = BackHandler.addEventListener(
-      'hardwareBackPress',
-      backAction,
-    );
-
-    return () => backHandler.remove();
-  }, [onClose]);
+  // ...existing code...
 
   // Get option sets from database
   const { data, isLoading, error } = db.useQuery(
@@ -91,7 +78,7 @@ export default function OptionSetsScreen({ onNavigateToEdit, onClose }: OptionSe
 
       onNavigateToEdit(setId, 'New Option Set');
     } catch (error) {
-      console.error('Error creating option set:', error);
+      // ...removed debug log...
       Alert.alert('Error', 'Failed to create option set');
     }
   };

@@ -68,10 +68,10 @@ export async function createDefaultLocation(storeId: string, storeName?: string)
       db.tx.locations[locationId].update(locationData)
     ]);
 
-    console.log(`Created default location for store ${storeId}: ${locationId}`);
+    // ...removed debug log...
     return locationId;
   } catch (error) {
-    console.error('Failed to create default location:', error);
+    // ...removed debug log...
 
     // If creation fails, try to find any existing location
     try {
@@ -89,7 +89,7 @@ export async function createDefaultLocation(storeId: string, storeName?: string)
         return fallbackLocations.data.locations[0].id;
       }
     } catch (fallbackError) {
-      console.error('Fallback location query failed:', fallbackError);
+      // ...removed debug log...
     }
 
     throw error;
