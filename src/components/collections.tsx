@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, FlatList, Modal } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, Alert, FlatList, Modal, BackHandler } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { id } from '@instantdb/react-native';
@@ -9,13 +9,25 @@ import R2Image from './ui/r2-image';
 interface CollectionsScreenProps {
   isGridView?: boolean;
   onOpenForm?: (collection?: any) => void;
+  onClose?: () => void;
 }
 
-export default function CollectionsScreen({ isGridView = false, onOpenForm }: CollectionsScreenProps) {
+export default function CollectionsScreen({ isGridView = false, onOpenForm, onClose }: CollectionsScreenProps) {
   const insets = useSafeAreaInsets();
   const [searchQuery, setSearchQuery] = useState('');
   const [showActionDrawer, setShowActionDrawer] = useState(false);
   const [selectedCollection, setSelectedCollection] = useState<any>(null);
+
+  // Handle Android back button to call onClose
+  useEffect(() => {
+    if (!onClose) return;
+    const backAction = () => {
+      onClose();
+      return true;
+    };
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
+    return () => backHandler.remove();
+  }, [onClose]);
 
   // Query collections with their products
   const { isLoading, error, data } = db.useQuery({
@@ -94,7 +106,7 @@ export default function CollectionsScreen({ isGridView = false, onOpenForm }: Co
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#fff', paddingTop: insets.top }}>
+    <View style={{ flex: 1, backgroundColor: '#fff' }}>
       {/* Clean Search Bar - Adapted from prod-form.tsx */}
       <View style={{
         flexDirection: 'row',

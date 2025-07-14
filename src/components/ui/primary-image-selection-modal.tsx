@@ -74,12 +74,7 @@ export default function PrimaryImageSelectionModal({
              file.alt?.toLowerCase().includes(searchQuery_lower);
     });
 
-    console.log('🔍 PRIMARY MODAL: Filtered images:', {
-      searchQuery,
-      originalCount: files.length,
-      filteredCount: result.length,
-      filteredImages: result.map(f => ({ id: f.id, title: f.title, url: f.url, type: f.type }))
-    });
+    // console.log removed
 
     return result;
   }, [files, searchQuery]);
@@ -134,16 +129,16 @@ export default function PrimaryImageSelectionModal({
         });
 
         if (uploadResult.success && uploadResult.fileRecord) {
-          console.log('✅ PRIMARY MODAL: Upload successful, fileRecord:', uploadResult.fileRecord);
+          // console.log removed
           // Immediately select the uploaded image
           handleImageSelect(uploadResult.fileRecord);
         } else {
-          console.log('❌ PRIMARY MODAL: Upload failed:', uploadResult.error);
+          // console.log removed
           Alert.alert('Upload Error', uploadResult.error || 'Failed to upload image');
         }
       }
     } catch (error) {
-      console.error('Upload error:', error);
+      // console.error removed
       Alert.alert('Error', 'Failed to upload image');
     } finally {
       setUploading(false);
@@ -159,12 +154,7 @@ export default function PrimaryImageSelectionModal({
   };
 
   const renderImageItem = ({ item: media }: { item: MediaItem }) => {
-    console.log('🖼️ PRIMARY MODAL: Rendering image item:', {
-      id: media.id,
-      title: media.title,
-      url: media.url,
-      type: media.type
-    });
+    // console.log removed
 
     return (
       <TouchableOpacity

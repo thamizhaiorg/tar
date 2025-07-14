@@ -394,6 +394,7 @@ export default function Page() {
         return <CollectionsScreen
           isGridView={isGridView}
           onOpenForm={openCollectionForm}
+          onClose={() => handleNavigate('menu')}
         />;
       case 'options':
         return <Options

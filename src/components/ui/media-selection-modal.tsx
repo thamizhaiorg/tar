@@ -84,12 +84,7 @@ export default function MediaSelectionModal({
              file.alt?.toLowerCase().includes(searchQuery_lower);
     });
 
-    console.log('🔍 MEDIA MODAL: Filtered images:', {
-      searchQuery,
-      originalCount: files.length,
-      filteredCount: result.length,
-      filteredImages: result.map(f => ({ id: f.id, title: f.title, url: f.url, type: f.type }))
-    });
+    // console.log removed
 
     return result;
   }, [files, searchQuery]);
@@ -162,22 +157,22 @@ export default function MediaSelectionModal({
 
         const results = await Promise.all(uploadPromises);
 
-        console.log('📤 MEDIA MODAL: Upload results:', results);
+        // console.log removed
 
         // Check for any failures
         const failures = results.filter(r => !r.success);
         const successes = results.filter(r => r.success);
 
         if (failures.length > 0) {
-          console.log('❌ MEDIA MODAL: Upload failures:', failures);
+          // console.log removed
           Alert.alert('Upload Error', `${failures.length} file(s) failed to upload`);
         } else {
-          console.log('✅ MEDIA MODAL: All uploads successful:', successes.length);
+          // console.log removed
           Alert.alert('Success', `${results.length} image(s) uploaded successfully`);
         }
       }
     } catch (error) {
-      console.error('Upload error:', error);
+      // console.error removed
       Alert.alert('Upload Error', 'Failed to upload images. Please try again.');
     } finally {
       setUploading(false);
@@ -195,13 +190,7 @@ export default function MediaSelectionModal({
   const renderMediaItem = ({ item: media }: { item: MediaItem }) => {
     const isSelected = selectedMediaIds.has(media.id);
 
-    console.log('🖼️ MEDIA MODAL: Rendering media item:', {
-      id: media.id,
-      title: media.title,
-      url: media.url,
-      type: media.type,
-      isSelected
-    });
+    // console.log removed
 
     return (
       <TouchableOpacity

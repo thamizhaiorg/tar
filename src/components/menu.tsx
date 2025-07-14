@@ -42,7 +42,7 @@ export default function FullScreenMenu({ onNavigate, onClose }: FullScreenMenuPr
   // Handle Android back button
   useEffect(() => {
     const backAction = () => {
-      // If in store form or management, go back to menu
+      // If any sub-screen is open, close it
       if (showStoreForm) {
         setShowStoreForm(false);
         return true;
@@ -51,18 +51,23 @@ export default function FullScreenMenu({ onNavigate, onClose }: FullScreenMenuPr
         setShowStoreManagement(false);
         return true;
       }
+      if (showComList) {
+        setShowComList(false);
+        return true;
+      }
       if (showPeopleaScreen) {
         setShowPeopleaScreen(false);
         return true;
       }
-      // Otherwise close menu
+      // If main menu is open, close it
       onClose();
       return true;
     };
-
     const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
-    return () => backHandler.remove();
-  }, [showStoreForm, showStoreManagement, showPeopleaScreen, onClose]);
+    return () => {
+      backHandler.remove();
+    };
+  }, [showStoreForm, showStoreManagement, showComList, showPeopleaScreen, onClose]);
 
 
 
