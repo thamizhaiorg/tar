@@ -420,6 +420,130 @@ const _schema = i.schema({
       createdAt: i.date(),
       updatedAt: i.date(),
     }),
+
+    // Storefront entities for web app
+    storefronts: i.entity({
+      storeId: i.string().unique().indexed().optional(), // Links to store entity
+      name: i.string().optional(),
+      description: i.string().optional(),
+      theme: i.string().optional(),
+      customDomain: i.string().optional().unique().indexed(),
+      subdomain: i.string().optional().unique().indexed(),
+      published: i.boolean().optional(),
+      seoTitle: i.string().optional(),
+      seoDescription: i.string().optional(),
+      favicon: i.string().optional(),
+      logo: i.string().optional(),
+      primaryColor: i.string().optional(),
+      secondaryColor: i.string().optional(),
+      fontFamily: i.string().optional(),
+      createdAt: i.date().optional(),
+      updatedAt: i.date().optional(),
+    }),
+
+    // Pages for storefront (homepage, about, contact, etc.)
+    pages: i.entity({
+      storeId: i.string().indexed().optional(),
+      storefrontId: i.string().indexed().optional(),
+      title: i.string().optional(),
+      slug: i.string().indexed().optional(), // URL slug like 'about', 'contact'
+      type: i.string().indexed().optional(), // 'homepage', 'custom', 'product', 'collection'
+      content: i.json().optional(), // Page content/blocks
+      seoTitle: i.string().optional(),
+      seoDescription: i.string().optional(),
+      published: i.boolean().optional(),
+      order: i.number().optional(),
+      createdAt: i.date().optional(),
+      updatedAt: i.date().optional(),
+    }),
+
+    // Blocks/sections for pages (hero, product grid, testimonials, etc.)
+    blocks: i.entity({
+      storeId: i.string().indexed().optional(),
+      pageId: i.string().indexed().optional(),
+      type: i.string().indexed().optional(), // 'hero', 'productGrid', 'testimonial', 'text', 'image'
+      content: i.json().optional(), // Block content (text, images, settings)
+      style: i.json().optional(), // Styling options (colors, fonts, spacing)
+      order: i.number().optional(),
+      visible: i.boolean().optional(),
+      createdAt: i.date().optional(),
+      updatedAt: i.date().optional(),
+    }),
+
+    // Blog posts for storefront
+    posts: i.entity({
+      storeId: i.string().indexed(),
+      storefrontId: i.string().indexed(),
+      title: i.string(),
+      slug: i.string().indexed(),
+      content: i.json().optional(), // Rich text content
+      excerpt: i.string().optional(),
+      featuredImage: i.string().optional(),
+      author: i.string().optional(),
+      published: i.boolean().optional(),
+      publishedAt: i.date().optional(),
+      seoTitle: i.string().optional(),
+      seoDescription: i.string().optional(),
+      tags: i.json().optional(), // Array of tags
+      createdAt: i.date(),
+      updatedAt: i.date().optional(),
+    }),
+
+    // Shopping cart for storefront
+    cart: i.entity({
+      storeId: i.string().indexed(),
+      userId: i.string().indexed().optional(), // Links to $users.id
+      sessionId: i.string().indexed().optional(), // For guest users
+      productId: i.string().indexed(),
+      itemId: i.string().indexed().optional(), // Variant ID
+      title: i.string(),
+      image: i.string().optional(),
+      price: i.number(),
+      quantity: i.number(),
+      sku: i.string().optional(),
+      variantTitle: i.string().optional(),
+      createdAt: i.date(),
+      updatedAt: i.date().optional(),
+    }),
+
+    // Themes for storefront customization
+    themes: i.entity({
+      name: i.string().unique().indexed(),
+      description: i.string().optional(),
+      variables: i.json(), // CSS variables or style tokens
+      preview: i.string().optional(), // Preview image URL
+      category: i.string().optional(), // 'minimal', 'modern', 'classic'
+      isPremium: i.boolean().optional(),
+      createdAt: i.date(),
+    }),
+
+    // Navigation menus for storefront
+    menus: i.entity({
+      storeId: i.string().indexed(),
+      storefrontId: i.string().indexed(),
+      name: i.string(),
+      type: i.string().indexed(), // 'header', 'footer', 'sidebar'
+      items: i.json(), // Array of menu items with links
+      order: i.number().optional(),
+      visible: i.boolean().optional(),
+      createdAt: i.date(),
+      updatedAt: i.date().optional(),
+    }),
+
+    // Testimonials/reviews for storefront
+    testimonials: i.entity({
+      storeId: i.string().indexed(),
+      storefrontId: i.string().indexed(),
+      customerName: i.string(),
+      customerImage: i.string().optional(),
+      rating: i.number().optional(),
+      content: i.string(),
+      productId: i.string().indexed().optional(),
+      approved: i.boolean().optional(),
+      featured: i.boolean().optional(),
+      createdAt: i.date(),
+      updatedAt: i.date().optional(),
+    }),
   },
   links: {
     inventoryStocks: {
@@ -625,6 +749,139 @@ const _schema = i.schema({
         on: "$users",
         has: "many",
         label: "files",
+      },
+    },
+
+    // Storefront relationships
+    storeStorefronts: {
+      forward: {
+        on: "store",
+        has: "one",
+        label: "storefront",
+      },
+      reverse: {
+        on: "storefronts",
+        has: "one",
+        label: "store",
+      },
+    },
+
+    storefrontsPages: {
+      forward: {
+        on: "storefronts",
+        has: "many",
+        label: "pages",
+      },
+      reverse: {
+        on: "pages",
+        has: "one",
+        label: "storefront",
+      },
+    },
+
+    pagesBlocks: {
+      forward: {
+        on: "pages",
+        has: "many",
+        label: "blocks",
+      },
+      reverse: {
+        on: "blocks",
+        has: "one",
+        label: "page",
+      },
+    },
+
+    storefrontsPosts: {
+      forward: {
+        on: "storefronts",
+        has: "many",
+        label: "posts",
+      },
+      reverse: {
+        on: "posts",
+        has: "one",
+        label: "storefront",
+      },
+    },
+
+    storefrontsMenus: {
+      forward: {
+        on: "storefronts",
+        has: "many",
+        label: "menus",
+      },
+      reverse: {
+        on: "menus",
+        has: "one",
+        label: "storefront",
+      },
+    },
+
+    storefrontsTestimonials: {
+      forward: {
+        on: "storefronts",
+        has: "many",
+        label: "testimonials",
+      },
+      reverse: {
+        on: "testimonials",
+        has: "one",
+        label: "storefront",
+      },
+    },
+
+    // Cart relationships
+    cart$users: {
+      forward: {
+        on: "cart",
+        has: "one",
+        label: "$users",
+      },
+      reverse: {
+        on: "$users",
+        has: "many",
+        label: "cart",
+      },
+    },
+
+    cartProducts: {
+      forward: {
+        on: "cart",
+        has: "one",
+        label: "product",
+      },
+      reverse: {
+        on: "products",
+        has: "many",
+        label: "cart",
+      },
+    },
+
+    cartItems: {
+      forward: {
+        on: "cart",
+        has: "one",
+        label: "item",
+      },
+      reverse: {
+        on: "items",
+        has: "many",
+        label: "cart",
+      },
+    },
+
+    // Testimonial relationships
+    testimonialsProducts: {
+      forward: {
+        on: "testimonials",
+        has: "one",
+        label: "product",
+      },
+      reverse: {
+        on: "products",
+        has: "many",
+        label: "testimonials",
       },
     },
   },

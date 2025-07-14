@@ -18,9 +18,11 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.835.0",
     "@aws-sdk/s3-request-presigner": "^3.835.0",
+    "@google/generative-ai": "^0.24.1",
     "@instantdb/react-native": "^0.20.6",
     "@react-native-async-storage/async-storage": "2.1.2",
     "@react-native-community/netinfo": "11.4.1",
+    "ai": "^4.3.17",
     "expo": "53.0.17",
     "expo-constants": "~17.1.4",
     "expo-document-picker": "~13.1.6",
