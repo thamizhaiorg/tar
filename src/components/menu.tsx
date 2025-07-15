@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, BackHandler, StatusBar, Image, Modal } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, BackHandler, StatusBar, Modal } from 'react-native';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStore } from '../lib/store-context';
 import { useAuth } from '../lib/auth-context';
@@ -45,10 +46,7 @@ export default function FullScreenMenu({ onNavigate, onClose }: FullScreenMenuPr
   // Set image URL immediately when profile is available
   useEffect(() => {
     if (peopleaProfile?.profileImage) {
-      // Set the original URL immediately to avoid delay
-      setDisplayImageUrl(peopleaProfile.profileImage);
-      
-      // If it's an R2 URL, generate signed URL in background and update
+      // If it's an R2 URL, generate signed URL
       if (peopleaProfile.profileImage.includes('r2.cloudflarestorage.com')) {
         const generateSignedUrl = async () => {
           try {
@@ -59,14 +57,21 @@ export default function FullScreenMenu({ onNavigate, onClose }: FullScreenMenuPr
                 setDisplayImageUrl(signedUrl);
                 // Prefetch the image to cache it
                 Image.prefetch(signedUrl);
+              } else {
+                setDisplayImageUrl(peopleaProfile.profileImage);
               }
+            } else {
+              setDisplayImageUrl(peopleaProfile.profileImage);
             }
           } catch (error) {
             // Keep using original URL on error
+            setDisplayImageUrl(peopleaProfile.profileImage);
           }
         };
         generateSignedUrl();
       } else {
+        // For non-R2 URLs, use directly
+        setDisplayImageUrl(peopleaProfile.profileImage);
         // Prefetch non-R2 images too
         Image.prefetch(peopleaProfile.profileImage);
       }
@@ -168,23 +173,18 @@ export default function FullScreenMenu({ onNavigate, onClose }: FullScreenMenuPr
             <View className="flex-row items-center justify-between">
               <TouchableOpacity
                 onPress={() => setShowPeopleaScreen(true)}
-                className="w-12 h-12 bg-gray-200"
-                style={{ borderRadius: 24, overflow: 'hidden' }}
+                className="w-12 h-12 rounded-full overflow-hidden"
               >
-                {displayImageUrl ? (
-                  <Image
-                    source={{ uri: displayImageUrl }}
-                    style={{ width: 48, height: 48 }}
-                    resizeMode="cover"
-                    defaultSource={require('../../assets/adaptive-icon.png')}
-                  />
-                ) : (
-                  <Image
-                    source={require('../../assets/adaptive-icon.png')}
-                    style={{ width: 48, height: 48 }}
-                    resizeMode="cover"
-                  />
-                )}
+                <Image
+                  source={
+                    displayImageUrl && displayImageUrl.length > 0 && displayImageUrl !== ''
+                      ? { uri: displayImageUrl }
+                      : require('../../assets/adaptive-icon.png')
+                  }
+                  style={{ width: 48, height: 48 }}
+                  contentFit="cover"
+                  cachePolicy="memory-disk"
+                />
               </TouchableOpacity>
               <TouchableOpacity 
                 onPress={() => setShowStatusDrawer(true)}

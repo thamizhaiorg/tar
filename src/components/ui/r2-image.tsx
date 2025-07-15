@@ -1,18 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Image, View, Text, ImageProps } from 'react-native';
+import { View, Text } from 'react-native';
+import { Image, ImageProps } from 'expo-image';
 import { MaterialIcons } from '@expo/vector-icons';
 import { r2Service } from '../../lib/r2-service';
 import { log, trackError } from '../../lib/logger';
 
-// Simple in-memory cache for signed URLs
-const urlCache = new Map<string, { url: string; timestamp: number }>();
-const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+// Simple in-memory cache for signed URLs - permanent cache (no expiry)
+const urlCache = new Map<string, string>();
 
 interface R2ImageProps extends Omit<ImageProps, 'source'> {
   url: string;
   fallback?: React.ReactNode;
   onError?: (error: any) => void;
   onLoad?: () => void;
+  resizeMode?: 'cover' | 'contain' | 'stretch' | 'repeat' | 'center'; // For backward compatibility
 }
 
 export default function R2Image({
@@ -21,6 +22,7 @@ export default function R2Image({
   onError,
   onLoad,
   style,
+  resizeMode,
   ...props
 }: R2ImageProps) {
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
@@ -51,11 +53,10 @@ export default function R2Image({
       setError(false);
 
       try {
-        // Check cache first
+        // Check cache first - permanent cache (no expiry)
         const cached = urlCache.get(url);
-        if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-          // Removed console log
-          setSignedUrl(cached.url);
+        if (cached) {
+          setSignedUrl(cached);
           setLoading(false);
           return;
         }
@@ -63,30 +64,26 @@ export default function R2Image({
         // Check if it's already a signed URL or public URL
         if (url.includes('X-Amz-Algorithm') || url.includes('Signature')) {
           // Already a signed URL
-          // Removed console log
           setSignedUrl(url);
-          // Cache it
-          urlCache.set(url, { url, timestamp: Date.now() });
+          // Cache it permanently
+          urlCache.set(url, url);
         } else {
           // Extract key from URL and generate signed URL
           const key = r2Service.extractKeyFromUrl(url);
-          // Removed console log
 
           if (key) {
             const signed = await r2Service.getSignedUrl(key);
-            // Removed debug log
 
             if (!abortController.signal.aborted) {
               setSignedUrl(signed);
-              // Cache the signed URL
-              urlCache.set(url, { url: signed, timestamp: Date.now() });
+              // Cache the signed URL permanently
+              urlCache.set(url, signed);
             }
           } else {
             // Fallback to original URL
-            // Removed warn log
             if (!abortController.signal.aborted) {
               setSignedUrl(url);
-              urlCache.set(url, { url, timestamp: Date.now() });
+              urlCache.set(url, url);
             }
           }
         }
@@ -132,11 +129,24 @@ export default function R2Image({
     );
   }
 
+  // Convert resizeMode to contentFit for Expo Image
+  const getContentFit = (mode?: string) => {
+    switch (mode) {
+      case 'cover': return 'cover';
+      case 'contain': return 'contain';
+      case 'stretch': return 'fill';
+      case 'repeat': return 'none';
+      case 'center': return 'none';
+      default: return 'cover';
+    }
+  };
+
   return (
     <Image
       {...props}
       source={{ uri: signedUrl }}
       style={style}
+      contentFit={getContentFit(resizeMode)}
       onError={(e) => {
         // Removed error log
         setError(true);

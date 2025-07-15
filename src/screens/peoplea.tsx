@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, TextInput, ScrollView, Alert, Image, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../lib/auth-context';
@@ -94,15 +95,17 @@ export default function PeopleaScreen({ onClose }: PeopleaScreenProps) {
   useEffect(() => {
     const generateDisplayUrl = async () => {
       if (formData.profileImage && formData.profileImage.startsWith('https://')) {
-        // If it's an R2 URL, generate a signed URL (R2Image component handles caching)
+        // If it's an R2 URL, generate a signed URL
         if (formData.profileImage.includes('r2.cloudflarestorage.com')) {
           try {
             const key = r2Service.extractKeyFromUrl(formData.profileImage);
             if (key) {
-              // Generate signed URL (let R2Image component handle caching)
+              // Generate signed URL
               const signedUrl = await r2Service.getSignedUrl(key, 3600); // 1 hour expiry
               if (signedUrl) {
                 setDisplayImageUrl(signedUrl);
+                // Prefetch the image to cache it
+                Image.prefetch(signedUrl);
               } else {
                 setDisplayImageUrl(formData.profileImage);
               }
@@ -116,6 +119,8 @@ export default function PeopleaScreen({ onClose }: PeopleaScreenProps) {
         } else {
           // For local files or other URLs, use as-is
           setDisplayImageUrl(formData.profileImage);
+          // Prefetch non-R2 images too
+          Image.prefetch(formData.profileImage);
         }
       } else {
         setDisplayImageUrl('');
@@ -314,16 +319,19 @@ export default function PeopleaScreen({ onClose }: PeopleaScreenProps) {
             disabled={isUploading}
             testID="profile-image-button"
           >
-            <View className="w-24 h-24 bg-gray-200 rounded-full items-center justify-center overflow-hidden">
-              {displayImageUrl ? (
-                <Image
-                  source={{ uri: displayImageUrl }}
-                  className="w-full h-full"
-                  resizeMode="cover"
-                />
-              ) : null}
+            <View className="w-24 h-24 rounded-full overflow-hidden">
+              <Image
+                source={
+                  displayImageUrl && displayImageUrl.length > 0 && displayImageUrl !== ''
+                    ? { uri: displayImageUrl }
+                    : require('../../assets/adaptive-icon.png')
+                }
+                style={{ width: 96, height: 96 }}
+                contentFit="cover"
+                cachePolicy="memory-disk"
+              />
               {isUploading && (
-                <View className="absolute inset-0 bg-black bg-opacity-50 items-center justify-center rounded-full">
+                <View className="absolute inset-0 bg-black/50 items-center justify-center rounded-full">
                   <ActivityIndicator size="small" color="#ffffff" />
                 </View>
               )}
