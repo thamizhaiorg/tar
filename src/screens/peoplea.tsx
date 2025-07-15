@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, TextInput, ScrollView, Alert, Image, BackHandler } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, ScrollView, Alert, Image, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../lib/auth-context';
+import { r2Service, UploadResult, UploadErrorType } from '../lib/r2-service';
 
 interface PeopleaScreenProps {
   onClose: () => void;
@@ -13,12 +14,61 @@ export default function PeopleaScreen({ onClose }: PeopleaScreenProps) {
   const { user, peopleaProfile, createPeopleaProfile, updatePeopleaProfile, signOut } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [displayImageUrl, setDisplayImageUrl] = useState<string>('');
+  const [imageCache, setImageCache] = useState<Map<string, { url: string; expiry: number }>>(new Map());
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
     bio: '',
     profileImage: '',
   });
+
+  // Handle upload errors with specific user messages based on error type
+  const handleUploadError = (uploadResult: UploadResult) => {
+    const errorType = uploadResult.errorType;
+    const errorMessage = uploadResult.error || 'Upload failed';
+
+    let title = 'Upload Error';
+    let message = 'Failed to upload image. Please try again.';
+    let actions = [{ text: 'OK' }];
+
+    switch (errorType) {
+      case UploadErrorType.CONFIGURATION:
+        title = 'Configuration Error';
+        message = 'Image storage is not properly configured. Please contact support.';
+        break;
+      
+      case UploadErrorType.NETWORK:
+        title = 'Network Error';
+        message = 'Unable to connect to the server. Please check your internet connection and try again.';
+        actions = [
+          { text: 'Cancel' },
+          { text: 'Retry', onPress: () => handleImagePicker() }
+        ];
+        break;
+      
+      case UploadErrorType.FILE_READ:
+        title = 'File Error';
+        message = 'Unable to read the selected image. Please try selecting a different image.';
+        break;
+      
+      case UploadErrorType.SERVER:
+        title = 'Server Error';
+        message = 'The server is temporarily unavailable. Please try again in a few moments.';
+        actions = [
+          { text: 'Cancel' },
+          { text: 'Retry', onPress: () => handleImagePicker() }
+        ];
+        break;
+      
+      default:
+        message = `Upload failed: ${errorMessage}`;
+        break;
+    }
+
+    Alert.alert(title, message, actions);
+  };
 
   // Initialize form data when profile loads
   useEffect(() => {
@@ -40,6 +90,55 @@ export default function PeopleaScreen({ onClose }: PeopleaScreenProps) {
       setIsEditing(true); // Start in editing mode for new profiles
     }
   }, [peopleaProfile, user]);
+
+  // Generate signed URL for displaying the profile image with caching
+  useEffect(() => {
+    const generateDisplayUrl = async () => {
+      if (formData.profileImage && formData.profileImage.startsWith('https://')) {
+        // If it's an R2 URL, generate a signed URL with caching
+        if (formData.profileImage.includes('r2.cloudflarestorage.com')) {
+          try {
+            const key = r2Service.extractKeyFromUrl(formData.profileImage);
+            if (key) {
+              // Check cache first
+              const cached = imageCache.get(key);
+              const now = Date.now();
+              
+              if (cached && cached.expiry > now) {
+                // Use cached URL
+                setDisplayImageUrl(cached.url);
+                return;
+              }
+
+              // Generate new signed URL
+              const signedUrl = await r2Service.getSignedUrl(key, 3600); // 1 hour expiry
+              if (signedUrl) {
+                // Cache the URL with expiry (50 minutes to be safe)
+                const newCache = new Map(imageCache);
+                newCache.set(key, { url: signedUrl, expiry: now + (50 * 60 * 1000) });
+                setImageCache(newCache);
+                setDisplayImageUrl(signedUrl);
+              } else {
+                setDisplayImageUrl(formData.profileImage);
+              }
+            } else {
+              setDisplayImageUrl(formData.profileImage);
+            }
+          } catch (error) {
+            console.error('Error generating signed URL:', error);
+            setDisplayImageUrl(formData.profileImage);
+          }
+        } else {
+          // For local files or other URLs, use as-is
+          setDisplayImageUrl(formData.profileImage);
+        }
+      } else {
+        setDisplayImageUrl('');
+      }
+    };
+
+    generateDisplayUrl();
+  }, [formData.profileImage, imageCache]);
 
   // ...existing code...
 
@@ -76,24 +175,102 @@ export default function PeopleaScreen({ onClose }: PeopleaScreenProps) {
   };
 
   const handleImagePicker = async () => {
+    if (isUploading) return;
+
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Permission needed', 'Please grant camera roll permissions to change your profile picture.');
       return;
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+        exif: false,
+      });
 
-    if (!result.canceled && result.assets[0]) {
-      setFormData(prev => ({
-        ...prev,
-        profileImage: result.assets[0].uri,
-      }));
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        setIsUploading(true);
+
+        // Show local image immediately for better UX
+        const originalImage = formData.profileImage;
+        setFormData(prev => ({
+          ...prev,
+          profileImage: asset.uri,
+        }));
+
+        try {
+          // Prepare media file object
+          const mediaFile = {
+            uri: asset.uri,
+            name: asset.fileName || `profile_${Date.now()}.jpg`,
+            type: asset.type || 'image/jpeg',
+            size: asset.fileSize,
+          };
+
+          console.log('Uploading profile image:', mediaFile);
+
+          // Check if R2 service is properly configured
+          const { validateR2Config } = await import('../lib/r2-config');
+          if (!validateR2Config()) {
+            throw new Error('R2 storage is not properly configured. Please check your environment variables.');
+          }
+
+          console.log('R2 configuration validated successfully');
+
+          // Use the standard uploadFile method like other components
+          console.log('Calling r2Service.uploadFile with:', { mediaFile, prefix: 'profiles' });
+
+          const uploadResult = await r2Service.uploadFile(mediaFile, 'profiles');
+          console.log('Upload result:', JSON.stringify(uploadResult, null, 2));
+
+          // Check if we got a valid result
+          if (!uploadResult) {
+            throw new Error('R2 service returned null/undefined result');
+          }
+
+          if (uploadResult.success && uploadResult.url) {
+            console.log('Profile image uploaded successfully:', uploadResult.url);
+            // Update with R2 URL
+            setFormData(prev => ({
+              ...prev,
+              profileImage: uploadResult.url!,
+            }));
+          } else {
+            // Handle different error types with specific user messages
+            handleUploadError(uploadResult);
+            // Revert to original image
+            setFormData(prev => ({
+              ...prev,
+              profileImage: originalImage,
+            }));
+          }
+        } catch (error) {
+          console.error('Error uploading profile image:', error);
+          
+          // Show generic error for unexpected errors
+          Alert.alert(
+            'Upload Error', 
+            'An unexpected error occurred while uploading your image. Please try again.',
+            [{ text: 'OK' }]
+          );
+          
+          // Revert to original image
+          setFormData(prev => ({
+            ...prev,
+            profileImage: originalImage,
+          }));
+        } finally {
+          setIsUploading(false);
+        }
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image. Please try again.');
     }
   };
 
@@ -130,13 +307,13 @@ export default function PeopleaScreen({ onClose }: PeopleaScreenProps) {
           </TouchableOpacity>
           <Text className="text-xl font-semibold text-gray-900">Profile</Text>
           {isEditing ? (
-            <TouchableOpacity onPress={handleSave} disabled={isSaving}>
+            <TouchableOpacity onPress={handleSave} disabled={isSaving} testID="save-button">
               <Text className={`text-lg ${isSaving ? 'text-gray-400' : 'text-blue-600'}`}>
                 {isSaving ? 'Saving...' : 'Save'}
               </Text>
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity onPress={() => setIsEditing(true)}>
+            <TouchableOpacity onPress={() => setIsEditing(true)} testID="edit-button">
               <Text className="text-lg text-blue-600">Edit</Text>
             </TouchableOpacity>
           )}
@@ -147,28 +324,34 @@ export default function PeopleaScreen({ onClose }: PeopleaScreenProps) {
         {/* Profile Image */}
         <View className="items-center mb-8">
           <TouchableOpacity
-            onPress={isEditing ? handleImagePicker : undefined}
+            onPress={isEditing && !isUploading ? handleImagePicker : undefined}
             className="relative"
+            disabled={isUploading}
+            testID="profile-image-button"
           >
             <View className="w-24 h-24 bg-gray-200 rounded-full items-center justify-center overflow-hidden">
-              {formData.profileImage ? (
+              {displayImageUrl ? (
                 <Image
-                  source={{ uri: formData.profileImage }}
+                  source={{ uri: displayImageUrl }}
                   className="w-full h-full"
                   resizeMode="cover"
                 />
-              ) : (
-                <Text className="text-3xl text-gray-500">
-                  {formData.name ? formData.name.charAt(0).toUpperCase() : '👤'}
-                </Text>
+              ) : null}
+              {isUploading && (
+                <View className="absolute inset-0 bg-black bg-opacity-50 items-center justify-center rounded-full">
+                  <ActivityIndicator size="small" color="#ffffff" />
+                </View>
               )}
             </View>
-            {isEditing && (
+            {isEditing && !isUploading && (
               <View className="absolute -bottom-1 -right-1 w-8 h-8 bg-blue-600 rounded-full items-center justify-center">
                 <Text className="text-white text-sm">✏️</Text>
               </View>
             )}
           </TouchableOpacity>
+          {isUploading && (
+            <Text className="text-sm text-gray-500 mt-2">Uploading...</Text>
+          )}
         </View>
 
         {/* Form Fields */}
@@ -189,9 +372,8 @@ export default function PeopleaScreen({ onClose }: PeopleaScreenProps) {
               onChangeText={(text) => setFormData(prev => ({ ...prev, name: text }))}
               placeholder="Enter your name"
               editable={isEditing}
-              className={`px-4 py-3 rounded-lg ${
-                isEditing ? 'bg-white border border-gray-300' : 'bg-gray-50'
-              }`}
+              className={`px-4 py-3 rounded-lg ${isEditing ? 'bg-white border border-gray-300' : 'bg-gray-50'
+                }`}
             />
           </View>
 
@@ -204,9 +386,8 @@ export default function PeopleaScreen({ onClose }: PeopleaScreenProps) {
               placeholder="Enter your phone number"
               keyboardType="phone-pad"
               editable={isEditing}
-              className={`px-4 py-3 rounded-lg ${
-                isEditing ? 'bg-white border border-gray-300' : 'bg-gray-50'
-              }`}
+              className={`px-4 py-3 rounded-lg ${isEditing ? 'bg-white border border-gray-300' : 'bg-gray-50'
+                }`}
             />
           </View>
 
@@ -220,9 +401,8 @@ export default function PeopleaScreen({ onClose }: PeopleaScreenProps) {
               multiline
               numberOfLines={3}
               editable={isEditing}
-              className={`px-4 py-3 rounded-lg ${
-                isEditing ? 'bg-white border border-gray-300' : 'bg-gray-50'
-              }`}
+              className={`px-4 py-3 rounded-lg ${isEditing ? 'bg-white border border-gray-300' : 'bg-gray-50'
+                }`}
               style={{ textAlignVertical: 'top' }}
             />
           </View>

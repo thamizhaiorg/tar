@@ -3,11 +3,20 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { r2Config, validateR2Config, generateFileKey, getPublicUrl } from './r2-config';
 import { log, trackError, PerformanceMonitor } from './logger';
 
+export enum UploadErrorType {
+  CONFIGURATION = 'configuration',
+  NETWORK = 'network',
+  FILE_READ = 'file_read',
+  SERVER = 'server',
+  UNKNOWN = 'unknown'
+}
+
 export interface UploadResult {
   success: boolean;
   url?: string;
   key?: string;
   error?: string;
+  errorType?: UploadErrorType;
 }
 
 export interface MediaFile {
@@ -48,61 +57,75 @@ class R2Service {
   }
 
   async uploadFile(file: MediaFile, prefix: string = 'media'): Promise<UploadResult> {
+    // Check client initialization
     if (!this.client) {
-      // Removed error log
-      return { success: false, error: 'R2 client not initialized' };
+      return { 
+        success: false, 
+        error: 'R2 client not initialized - check configuration', 
+        errorType: UploadErrorType.CONFIGURATION 
+      };
     }
 
-    // Removed info log
+    // Validate file input
+    if (!file || !file.uri) {
+      return { 
+        success: false, 
+        error: 'Invalid file provided', 
+        errorType: UploadErrorType.FILE_READ 
+      };
+    }
+
+    console.log('Starting file upload:', { name: file.name, type: file.type, size: file.size });
 
     try {
-      return await (async () => {
-        // Generate unique key for the file
-        const key = generateFileKey(file.name, prefix);
-        // Removed debug log
+      // Generate unique key for the file
+      const key = generateFileKey(file.name, prefix);
+      console.log('Generated file key:', key);
 
-      // Read file content - use different approach for React Native
-      const response = await fetch(file.uri);
-
-      // For React Native, we need to handle the response differently
+      // Read file content with improved error handling
       let body: Uint8Array;
-
       try {
-        // Try web approach first
-        const buffer = await response.arrayBuffer();
-        body = new Uint8Array(buffer);
-      } catch (error) {
-        // Fallback for React Native - use blob and convert to base64
-        try {
-          const blob = await response.blob();
-
-          // Use a different approach for React Native
-          const base64Data = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => {
-              const result = reader.result as string;
-              // Remove data URL prefix (data:image/jpeg;base64,)
-              const base64 = result.split(',')[1];
-              resolve(base64);
-            };
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-          });
-
-          // Convert base64 to Uint8Array
-          const binaryString = atob(base64Data);
-          body = new Uint8Array(binaryString.length);
-          for (let i = 0; i < binaryString.length; i++) {
-            body[i] = binaryString.charCodeAt(i);
-          }
-        } catch (blobError) {
-          // Final fallback - read as text and convert
-          const text = await response.text();
-          body = new TextEncoder().encode(text);
+        console.log('Fetching file from URI:', file.uri);
+        const response = await fetch(file.uri);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch file: ${response.status} ${response.statusText}`);
         }
+
+        // Try arrayBuffer first (most reliable for React Native)
+        try {
+          const arrayBuffer = await response.arrayBuffer();
+          body = new Uint8Array(arrayBuffer);
+          console.log('Successfully read file as arrayBuffer, size:', body.byteLength);
+        } catch (arrayBufferError) {
+          console.log('ArrayBuffer failed, trying blob approach:', arrayBufferError);
+          
+          // Fallback to blob
+          const blob = await response.blob();
+          const arrayBuffer = await blob.arrayBuffer();
+          body = new Uint8Array(arrayBuffer);
+          console.log('Successfully read file as blob->arrayBuffer, size:', body.byteLength);
+        }
+      } catch (fileReadError) {
+        console.error('File reading failed:', fileReadError);
+        return {
+          success: false,
+          error: `Failed to read file: ${fileReadError instanceof Error ? fileReadError.message : 'Unknown file read error'}`,
+          errorType: UploadErrorType.FILE_READ
+        };
+      }
+
+      // Validate file content
+      if (!body || body.byteLength === 0) {
+        return {
+          success: false,
+          error: 'File appears to be empty or corrupted',
+          errorType: UploadErrorType.FILE_READ
+        };
       }
 
       // Upload to R2
+      console.log('Uploading to R2 with key:', key);
       const command = new PutObjectCommand({
         Bucket: r2Config.bucketName,
         Key: key,
@@ -111,25 +134,75 @@ class R2Service {
         ContentLength: body.byteLength,
       });
 
-        await this.client.send(command);
+      await this.client.send(command);
 
-        // Return success with public URL
-        const url = getPublicUrl(key);
-        // ...removed debug log...
-        // Removed info log
-        return { success: true, url, key };
-      });
+      // Generate public URL
+      const url = getPublicUrl(key);
+      console.log('Upload successful, URL:', url);
+
+      return { success: true, url, key };
 
     } catch (error) {
+      console.error('Upload error:', error);
+      
+      // Categorize error type
+      const errorType = this.categorizeError(error);
+      const errorMessage = error instanceof Error ? error.message : 'Upload failed';
+
       trackError(error as Error, 'R2Service', {
         fileName: file.name,
-        fileSize: file.size
+        fileSize: file.size,
+        errorType
       });
+
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Upload failed'
+        error: errorMessage,
+        errorType
       };
     }
+  }
+
+  private categorizeError(error: unknown): UploadErrorType {
+    if (!error) return UploadErrorType.UNKNOWN;
+
+    const errorMessage = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+
+    // Configuration errors
+    if (errorMessage.includes('credentials') || 
+        errorMessage.includes('access denied') || 
+        errorMessage.includes('unauthorized') ||
+        errorMessage.includes('invalid access key') ||
+        errorMessage.includes('signature')) {
+      return UploadErrorType.CONFIGURATION;
+    }
+
+    // Network errors
+    if (errorMessage.includes('network') || 
+        errorMessage.includes('timeout') || 
+        errorMessage.includes('connection') ||
+        errorMessage.includes('fetch') ||
+        errorMessage.includes('enotfound') ||
+        errorMessage.includes('econnrefused')) {
+      return UploadErrorType.NETWORK;
+    }
+
+    // File reading errors
+    if (errorMessage.includes('file') && 
+        (errorMessage.includes('read') || errorMessage.includes('access') || errorMessage.includes('not found'))) {
+      return UploadErrorType.FILE_READ;
+    }
+
+    // Server errors (5xx status codes)
+    if (errorMessage.includes('500') || 
+        errorMessage.includes('502') || 
+        errorMessage.includes('503') || 
+        errorMessage.includes('504') ||
+        errorMessage.includes('internal server error')) {
+      return UploadErrorType.SERVER;
+    }
+
+    return UploadErrorType.UNKNOWN;
   }
 
   async deleteFile(key: string): Promise<boolean> {
@@ -249,76 +322,111 @@ class R2Service {
 
   // Upload file with custom key (internal method)
   private async uploadFileWithCustomKey(file: MediaFile, key: string): Promise<UploadResult> {
-    // Removed console log
-
+    // Check client initialization
     if (!this.client) {
-      console.error('❌ R2Service: R2 client not initialized');
-      // Removed error log
-      return { success: false, error: 'R2 client not initialized' };
+      return { 
+        success: false, 
+        error: 'R2 client not initialized - check configuration', 
+        errorType: UploadErrorType.CONFIGURATION 
+      };
     }
 
-    // Removed console log
-    // Removed info log
+    // Validate file input
+    if (!file || !file.uri) {
+      return { 
+        success: false, 
+        error: 'Invalid file provided', 
+        errorType: UploadErrorType.FILE_READ 
+      };
+    }
+
+    console.log('Starting file upload with custom key:', { name: file.name, key });
 
     try {
-      return await (async () => {
-        // Read file content - use different approach for React Native
+      // Read file content with improved error handling
+      let body: Uint8Array;
+      try {
+        console.log('Fetching file from URI:', file.uri);
         const response = await fetch(file.uri);
-
-        // For React Native, we need to handle the response differently
-        let body: Uint8Array;
-
-        try {
-          // Try to get as array buffer first
-          const arrayBuffer = await response.arrayBuffer();
-          body = new Uint8Array(arrayBuffer);
-        } catch (arrayBufferError) {
-          try {
-            // Fallback to blob
-            const blob = await response.blob();
-            const arrayBuffer = await blob.arrayBuffer();
-            body = new Uint8Array(arrayBuffer);
-          } catch (blobError) {
-            // Final fallback - read as text and convert
-            const text = await response.text();
-            body = new TextEncoder().encode(text);
-          }
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch file: ${response.status} ${response.statusText}`);
         }
 
-        // Upload to R2
-        const command = new PutObjectCommand({
-          Bucket: r2Config.bucketName,
-          Key: key,
-          Body: body,
-          ContentType: file.type,
-          ContentLength: body.byteLength,
-        });
+        // Try arrayBuffer first (most reliable for React Native)
+        try {
+          const arrayBuffer = await response.arrayBuffer();
+          body = new Uint8Array(arrayBuffer);
+          console.log('Successfully read file as arrayBuffer, size:', body.byteLength);
+        } catch (arrayBufferError) {
+          console.log('ArrayBuffer failed, trying blob approach:', arrayBufferError);
+          
+          // Fallback to blob
+          const blob = await response.blob();
+          const arrayBuffer = await blob.arrayBuffer();
+          body = new Uint8Array(arrayBuffer);
+          console.log('Successfully read file as blob->arrayBuffer, size:', body.byteLength);
+        }
+      } catch (fileReadError) {
+        console.error('File reading failed:', fileReadError);
+        return {
+          success: false,
+          error: `Failed to read file: ${fileReadError instanceof Error ? fileReadError.message : 'Unknown file read error'}`,
+          errorType: UploadErrorType.FILE_READ
+        };
+      }
 
-        await this.client.send(command);
+      // Validate file content
+      if (!body || body.byteLength === 0) {
+        return {
+          success: false,
+          error: 'File appears to be empty or corrupted',
+          errorType: UploadErrorType.FILE_READ
+        };
+      }
 
-        // Return success with public URL
-        const url = getPublicUrl(key);
-        // Removed info log
-        return { success: true, url, key };
+      // Upload to R2
+      console.log('Uploading to R2 with custom key:', key);
+      const command = new PutObjectCommand({
+        Bucket: r2Config.bucketName,
+        Key: key,
+        Body: body,
+        ContentType: file.type,
+        ContentLength: body.byteLength,
       });
 
+      await this.client.send(command);
+
+      // Generate public URL
+      const url = getPublicUrl(key);
+      console.log('Upload successful, URL:', url);
+
+      return { success: true, url, key };
+
     } catch (error) {
+      console.error('Upload error:', error);
+      
+      // Categorize error type
+      const errorType = this.categorizeError(error);
+      const errorMessage = error instanceof Error ? error.message : 'Upload failed';
+
       trackError(error as Error, 'R2Service', {
         fileName: file.name,
         fileSize: file.size,
-        customKey: key
+        customKey: key,
+        errorType
       });
+
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Upload failed'
+        error: errorMessage,
+        errorType
       };
     }
   }
 
   // Generate signed URL for reading files (for private buckets)
   async getSignedUrl(key: string, expiresIn: number = 3600): Promise<string | null> {
-    // Removed console log
-
     if (!this.client) {
       console.error('❌ R2Service: R2 client not initialized');
       return null;
@@ -330,10 +438,7 @@ class R2Service {
         Key: key,
       });
 
-      // Removed console log
-
       const signedUrl = await getSignedUrl(this.client, command, { expiresIn });
-      // Removed console log
       return signedUrl;
     } catch (error) {
       console.error('❌ R2Service: Failed to generate signed URL:', { key, error });

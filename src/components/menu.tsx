@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, BackHandler, StatusBar, Image } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, BackHandler, StatusBar, Image, Modal } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStore } from '../lib/store-context';
 import { useAuth } from '../lib/auth-context';
+import { r2Service } from '../lib/r2-service';
 import StoreForm from './store-form';
 import StoreManagement from './store-mgmt';
 import ComList from './comlist';
@@ -23,6 +24,9 @@ export default function FullScreenMenu({ onNavigate, onClose }: FullScreenMenuPr
   const [showStoreManagement, setShowStoreManagement] = useState(false);
   const [showComList, setShowComList] = useState(false);
   const [showPeopleaScreen, setShowPeopleaScreen] = useState(false);
+  const [showStatusDrawer, setShowStatusDrawer] = useState(false);
+  const [displayImageUrl, setDisplayImageUrl] = useState<string>('');
+  const [currentStatus, setCurrentStatus] = useState('Work');
 
   // User status and notification data
   const userData = {
@@ -38,6 +42,38 @@ export default function FullScreenMenu({ onNavigate, onClose }: FullScreenMenuPr
     }
   };
 
+  // Set image URL immediately when profile is available
+  useEffect(() => {
+    if (peopleaProfile?.profileImage) {
+      // Set the original URL immediately to avoid delay
+      setDisplayImageUrl(peopleaProfile.profileImage);
+      
+      // If it's an R2 URL, generate signed URL in background and update
+      if (peopleaProfile.profileImage.includes('r2.cloudflarestorage.com')) {
+        const generateSignedUrl = async () => {
+          try {
+            const key = r2Service.extractKeyFromUrl(peopleaProfile.profileImage);
+            if (key) {
+              const signedUrl = await r2Service.getSignedUrl(key, 3600);
+              if (signedUrl) {
+                setDisplayImageUrl(signedUrl);
+                // Prefetch the image to cache it
+                Image.prefetch(signedUrl);
+              }
+            }
+          } catch (error) {
+            // Keep using original URL on error
+          }
+        };
+        generateSignedUrl();
+      } else {
+        // Prefetch non-R2 images too
+        Image.prefetch(peopleaProfile.profileImage);
+      }
+    } else {
+      setDisplayImageUrl('');
+    }
+  }, [peopleaProfile?.profileImage]);
 
   // Handle Android back button
   useEffect(() => {
@@ -132,26 +168,25 @@ export default function FullScreenMenu({ onNavigate, onClose }: FullScreenMenuPr
             <View className="flex-row items-center justify-between">
               <TouchableOpacity
                 onPress={() => setShowPeopleaScreen(true)}
-                className="w-12 h-12"
+                className="w-12 h-12 bg-gray-200"
                 style={{ borderRadius: 24, overflow: 'hidden' }}
               >
-                {peopleaProfile?.profileImage ? (
-                  <Image
-                    source={{ uri: peopleaProfile.profileImage }}
-                    style={{ width: 48, height: 48 }}
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <View className="w-12 h-12 bg-gray-200 items-center justify-center" style={{ borderRadius: 24 }}>
-                    <Text className="text-lg text-gray-600">
-                      {peopleaProfile?.name ? peopleaProfile.name.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase() || '👤'}
-                    </Text>
-                  </View>
-                )}
+                <Image
+                  source={{ uri: displayImageUrl || '' }}
+                  style={{ width: 48, height: 48 }}
+                  resizeMode="cover"
+                  defaultSource={require('../../assets/adaptive-icon.png')}
+                />
               </TouchableOpacity>
-              <Text className="text-lg font-bold text-gray-900">
-                {(userData.status || '').toLowerCase()}
-              </Text>
+              <TouchableOpacity 
+                onPress={() => setShowStatusDrawer(true)}
+                className="px-3 py-1 border border-gray-300"
+                style={{ borderRadius: 6 }}
+              >
+                <Text className="text-gray-800 text-sm">
+                  {currentStatus.toLowerCase()}
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -161,18 +196,13 @@ export default function FullScreenMenu({ onNavigate, onClose }: FullScreenMenuPr
             className="bg-white p-6 mb-1"
             style={{ minHeight: 160 }}
           >
-            <View className="flex-row items-start justify-between">
-              <View className="flex-1">
-                <Text className="text-black text-2xl font-bold mb-2">Space</Text>
-                <Text className="text-gray-500 text-xl font-bold">
-                  {userData.spaceNotifications.length > 0
-                    ? userData.spaceNotifications[0].message
-                    : 'Taxi arriving in 10 minutes'}
-                </Text>
-              </View>
-              <View className="w-10 h-10 bg-gray-100 items-center justify-center" style={{ borderRadius: 20 }}>
-                <Text className="text-lg">🌌</Text>
-              </View>
+            <View className="flex-1">
+              <Text className="text-black text-2xl font-bold mb-2">Space</Text>
+              <Text className="text-gray-500 text-xl font-bold">
+                {userData.spaceNotifications.length > 0
+                  ? userData.spaceNotifications[0].message
+                  : 'Taxi arriving in 10 minutes'}
+              </Text>
             </View>
           </TouchableOpacity>
 
@@ -180,13 +210,17 @@ export default function FullScreenMenu({ onNavigate, onClose }: FullScreenMenuPr
           <TouchableOpacity
             onPress={() => handleItemPress('commerce')}
             className="p-6"
-            style={{ minHeight: 200, borderRadius: 10, backgroundColor: '#F5F5F5' }}
+            style={{ minHeight: 280, borderRadius: 10, backgroundColor: '#F5F5F5' }}
           >
             <View className="flex-1">
               {/* Header */}
               <View className="mb-4">
-                <Text className="text-black text-2xl font-bold mb-1">Commerce</Text>
-                <TouchableOpacity onPress={() => setShowStoreManagement(true)}>
+                <Text className="text-black text-2xl font-bold mb-3">Commerce</Text>
+                <TouchableOpacity 
+                  onPress={() => setShowStoreManagement(true)}
+                  className="self-start px-3 py-1 border border-gray-300"
+                  style={{ borderRadius: 6 }}
+                >
                   <Text className="text-green-800 text-sm">
                     {currentStore?.name || 'Store A'}
                   </Text>
@@ -233,6 +267,52 @@ export default function FullScreenMenu({ onNavigate, onClose }: FullScreenMenuPr
         </View>
       </ScrollView>
 
+      {/* Status Selection Bottom Drawer */}
+      <Modal
+        visible={showStatusDrawer}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowStatusDrawer(false)}
+      >
+        <View className="flex-1 justify-end">
+          <View className="bg-white rounded-t-3xl" style={{ paddingBottom: insets.bottom }}>
+            {/* Handle bar */}
+            <View className="items-center py-3">
+              <View className="w-10 h-1 bg-gray-300 rounded-full" />
+            </View>
+            
+            {/* Header */}
+            <View className="px-6 pb-4">
+              <Text className="text-lg font-semibold text-gray-900">Status</Text>
+            </View>
+            
+            {/* Status Options */}
+            <View className="px-6 pb-6">
+              {['Work', 'Offline', 'Break', 'Available'].map((status) => (
+                <TouchableOpacity
+                  key={status}
+                  onPress={() => {
+                    setCurrentStatus(status);
+                    setShowStatusDrawer(false);
+                  }}
+                  className={`py-4 border-b border-gray-100 ${status === 'Offline' ? 'last:border-b-0' : ''}`}
+                >
+                  <View className="flex-row items-center justify-between">
+                    <Text className={`text-base ${currentStatus === status ? 'text-blue-600 font-medium' : 'text-gray-900'}`}>
+                      {status}
+                    </Text>
+                    {currentStatus === status && (
+                      <View className="w-5 h-5 bg-blue-600 rounded-full items-center justify-center">
+                        <Text className="text-white text-xs">✓</Text>
+                      </View>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </View>
+      </Modal>
 
     </View>
   );
