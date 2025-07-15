@@ -16,7 +16,6 @@ export default function PeopleaScreen({ onClose }: PeopleaScreenProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [displayImageUrl, setDisplayImageUrl] = useState<string>('');
-  const [imageCache, setImageCache] = useState<Map<string, { url: string; expiry: number }>>(new Map());
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -91,32 +90,18 @@ export default function PeopleaScreen({ onClose }: PeopleaScreenProps) {
     }
   }, [peopleaProfile, user]);
 
-  // Generate signed URL for displaying the profile image with caching
+  // Generate signed URL for displaying the profile image
   useEffect(() => {
     const generateDisplayUrl = async () => {
       if (formData.profileImage && formData.profileImage.startsWith('https://')) {
-        // If it's an R2 URL, generate a signed URL with caching
+        // If it's an R2 URL, generate a signed URL (R2Image component handles caching)
         if (formData.profileImage.includes('r2.cloudflarestorage.com')) {
           try {
             const key = r2Service.extractKeyFromUrl(formData.profileImage);
             if (key) {
-              // Check cache first
-              const cached = imageCache.get(key);
-              const now = Date.now();
-              
-              if (cached && cached.expiry > now) {
-                // Use cached URL
-                setDisplayImageUrl(cached.url);
-                return;
-              }
-
-              // Generate new signed URL
+              // Generate signed URL (let R2Image component handle caching)
               const signedUrl = await r2Service.getSignedUrl(key, 3600); // 1 hour expiry
               if (signedUrl) {
-                // Cache the URL with expiry (50 minutes to be safe)
-                const newCache = new Map(imageCache);
-                newCache.set(key, { url: signedUrl, expiry: now + (50 * 60 * 1000) });
-                setImageCache(newCache);
                 setDisplayImageUrl(signedUrl);
               } else {
                 setDisplayImageUrl(formData.profileImage);
@@ -138,7 +123,7 @@ export default function PeopleaScreen({ onClose }: PeopleaScreenProps) {
     };
 
     generateDisplayUrl();
-  }, [formData.profileImage, imageCache]);
+  }, [formData.profileImage]);
 
   // ...existing code...
 

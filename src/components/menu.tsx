@@ -171,12 +171,20 @@ export default function FullScreenMenu({ onNavigate, onClose }: FullScreenMenuPr
                 className="w-12 h-12 bg-gray-200"
                 style={{ borderRadius: 24, overflow: 'hidden' }}
               >
-                <Image
-                  source={{ uri: displayImageUrl || '' }}
-                  style={{ width: 48, height: 48 }}
-                  resizeMode="cover"
-                  defaultSource={require('../../assets/adaptive-icon.png')}
-                />
+                {displayImageUrl ? (
+                  <Image
+                    source={{ uri: displayImageUrl }}
+                    style={{ width: 48, height: 48 }}
+                    resizeMode="cover"
+                    defaultSource={require('../../assets/adaptive-icon.png')}
+                  />
+                ) : (
+                  <Image
+                    source={require('../../assets/adaptive-icon.png')}
+                    style={{ width: 48, height: 48 }}
+                    resizeMode="cover"
+                  />
+                )}
               </TouchableOpacity>
               <TouchableOpacity 
                 onPress={() => setShowStatusDrawer(true)}
