@@ -50,13 +50,7 @@ export default function FilesScreen({ onClose }: FilesScreenProps) {
     return PerformanceMonitor.measure('filter-files', () => {
       const typeFilter = selectedType as 'images' | 'videos' | 'documents' | 'all';
       const result = searchFiles(searchQuery, typeFilter);
-      log.debug('Files filtered', 'FilesScreen', {
-        selectedType,
-        searchQuery,
-        originalCount: files.length,
-        filteredCount: result.length,
-        filteredFiles: result.map(f => ({ id: f.id, title: f.title, url: f.url, type: f.type }))
-      });
+      // Files filtered successfully
       return result;
     });
   }, [searchFiles, searchQuery, selectedType, files.length]);
@@ -111,14 +105,7 @@ export default function FilesScreen({ onClose }: FilesScreenProps) {
   const renderFileItem = ({ item: file }: { item: FileItem }) => {
     const isImage = file.type.startsWith('image/') || file.type === 'image';
 
-    console.log('🖼️ FILES SCREEN: Rendering file item:', {
-      id: file.id,
-      title: file.title,
-      url: file.url,
-      type: file.type,
-      isImage,
-      size: file.size
-    });
+    // Rendering file item
 
     return (
       <TouchableOpacity
@@ -133,10 +120,10 @@ export default function FilesScreen({ onClose }: FilesScreenProps) {
               style={{ width: '100%', height: '100%' }}
               resizeMode="cover"
               onLoad={() => {
-                log.debug('Files screen image loaded successfully', 'FilesScreen', { url: file.url });
+                // Image loaded successfully
               }}
               onError={(error) => {
-                log.error('Files screen image load error', 'FilesScreen', { url: file.url, error });
+                // Image load error
               }}
             />
           ) : (

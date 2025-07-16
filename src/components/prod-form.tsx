@@ -1368,22 +1368,6 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
                 <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827' }}>n</Text>
               </TouchableOpacity>
 
-              {/* Options Tile - Square */}
-              <TouchableOpacity
-                style={{
-                  width: 60,
-                  height: 60,
-                  backgroundColor: '#fff',
-                  borderRightWidth: 1,
-                  borderColor: '#E5E7EB',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-                onPress={() => setShowOptionSetSelector(true)}
-              >
-                <Text style={{ fontSize: 20, fontWeight: '600', color: '#111827' }}>O</Text>
-              </TouchableOpacity>
-
               {/* POS Tile - Square */}
               <TouchableOpacity
                 style={{
@@ -1445,6 +1429,7 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
             marginTop: 16,
             overflow: 'hidden',
           }}>
+
             {/* Options Row */}
             <TouchableOpacity
               style={{
@@ -1455,19 +1440,8 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
                 borderBottomWidth: 1,
                 borderBottomColor: '#E5E7EB',
               }}
-              onPress={() => onNavigate?.('options', { productId: product?.id })}
+              onPress={() => setShowOptionSetSelector(true)}
             >
-              <View style={{
-                width: 32,
-                height: 32,
-                backgroundColor: '#F3F4F6',
-                borderRadius: 6,
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginRight: 12,
-              }}>
-                <Text style={{ fontSize: 16 }}>o</Text>
-              </View>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 16, fontWeight: '500', color: '#111827' }}>
                   Options
@@ -1501,17 +1475,6 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
               }}
               onPress={() => onNavigate?.('items', { productId: product?.id, product: product })}
             >
-              <View style={{
-                width: 32,
-                height: 32,
-                backgroundColor: '#F3F4F6',
-                borderRadius: 6,
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginRight: 12,
-              }}>
-                <Text style={{ fontSize: 16, fontWeight: '600' }}>I</Text>
-              </View>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 16, fontWeight: '500', color: '#111827' }}>
                   Items

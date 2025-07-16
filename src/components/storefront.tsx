@@ -74,149 +74,99 @@ export default function StorefrontScreen({ onClose }: StorefrontProps) {
 
     return (
       <ScrollView className="flex-1 bg-gray-50" showsVerticalScrollIndicator={false}>
-        {/* Hero Section */}
-        <View className="bg-white px-6 pt-8 pb-6 border-b border-gray-200">
-          <Text className="text-3xl font-bold text-gray-900 mb-2">
+        {/* Header Section */}
+        <View className="bg-white px-4 pt-6 pb-4">
+          <Text className="text-2xl font-bold text-gray-900 mb-1">
             Storefront Site
           </Text>
-          <Text className="text-lg text-gray-600">
+          <Text className="text-gray-600">
             Manage your online storefront and web presence
           </Text>
         </View>
 
-        {/* Quick Stats Cards */}
-        <View className="px-6 pt-8">
-          <View className="flex-row gap-4 mb-8">
-            <View className="flex-1 bg-white p-4 rounded-xl border border-gray-200">
+        {/* Stats Section */}
+        <View className="px-4 pt-4">
+          <View className="flex-row gap-3 mb-6">
+            <View className="flex-1 bg-white p-4 rounded-lg">
               <Text className="text-2xl font-bold text-gray-900">0</Text>
-              <Text className="text-sm text-gray-600">Online Orders</Text>
+              <Text className="text-sm text-gray-600 mt-1">Online Orders</Text>
             </View>
-            <View className="flex-1 bg-white p-4 rounded-xl border border-gray-200">
+            <View className="flex-1 bg-white p-4 rounded-lg">
               <Text className="text-2xl font-bold text-gray-900">0</Text>
-              <Text className="text-sm text-gray-600">Site Visitors</Text>
+              <Text className="text-sm text-gray-600 mt-1">Site Visitors</Text>
             </View>
           </View>
 
-          {/* Main Features */}
-          <View className="gap-4">
-            {/* Site Management */}
-            <TouchableOpacity className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-              <View className="flex-row items-center">
-                <View className="w-12 h-12 bg-blue-100 rounded-xl items-center justify-center mr-4">
-                  <Text className="text-xl">🌐</Text>
-                </View>
-                <View className="flex-1">
-                  <Text className="text-xl font-semibold text-gray-900 mb-1">
-                    Site Settings
-                  </Text>
-                  <Text className="text-gray-600">
-                    Configure your storefront appearance and settings
-                  </Text>
-                </View>
-                <Text className="text-gray-400 text-xl">›</Text>
+          {/* Main Actions */}
+          <View className="gap-3">
+            {/* Site Settings */}
+            <TouchableOpacity className="bg-white p-4 rounded-lg flex-row items-center">
+              <View className="w-10 h-10 bg-blue-50 rounded-lg items-center justify-center mr-3">
+                <Feather name="globe" size={20} color="#3B82F6" />
               </View>
+              <View className="flex-1">
+                <Text className="text-base font-semibold text-gray-900">
+                  Site Settings
+                </Text>
+                <Text className="text-sm text-gray-600 mt-0.5">
+                  Configure your storefront appearance and settings
+                </Text>
+              </View>
+              <Feather name="chevron-right" size={20} color="#9CA3AF" />
             </TouchableOpacity>
 
-            {/* Theme Customization */}
-            <TouchableOpacity className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-              <View className="flex-row items-center">
-                <View className="w-12 h-12 bg-purple-100 rounded-xl items-center justify-center mr-4">
-                  <Text className="text-xl">🎨</Text>
-                </View>
-                <View className="flex-1">
-                  <Text className="text-xl font-semibold text-gray-900 mb-1">
-                    Theme & Design
-                  </Text>
-                  <Text className="text-gray-600">
-                    Customize colors, fonts, and layout
-                  </Text>
-                </View>
-                <Text className="text-gray-400 text-xl">›</Text>
+            {/* Theme & Design */}
+            <TouchableOpacity className="bg-white p-4 rounded-lg flex-row items-center">
+              <View className="w-10 h-10 bg-purple-50 rounded-lg items-center justify-center mr-3">
+                <Feather name="edit-3" size={20} color="#8B5CF6" />
               </View>
+              <View className="flex-1">
+                <Text className="text-base font-semibold text-gray-900">
+                  Theme & Design
+                </Text>
+                <Text className="text-sm text-gray-600 mt-0.5">
+                  Customize colors, fonts, and layout
+                </Text>
+              </View>
+              <Feather name="chevron-right" size={20} color="#9CA3AF" />
             </TouchableOpacity>
 
             {/* Online Orders */}
-            <TouchableOpacity className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-              <View className="flex-row items-center">
-                <View className="w-12 h-12 bg-green-100 rounded-xl items-center justify-center mr-4">
-                  <Text className="text-xl">📦</Text>
-                </View>
-                <View className="flex-1">
-                  <Text className="text-xl font-semibold text-gray-900 mb-1">
-                    Online Orders
-                  </Text>
-                  <Text className="text-gray-600">
-                    Manage orders from your website
-                  </Text>
-                </View>
-                <Text className="text-gray-400 text-xl">›</Text>
+            <TouchableOpacity className="bg-white p-4 rounded-lg flex-row items-center">
+              <View className="w-10 h-10 bg-green-50 rounded-lg items-center justify-center mr-3">
+                <Feather name="package" size={20} color="#10B981" />
               </View>
+              <View className="flex-1">
+                <Text className="text-base font-semibold text-gray-900">
+                  Online Orders
+                </Text>
+                <Text className="text-sm text-gray-600 mt-0.5">
+                  Manage orders from your website
+                </Text>
+              </View>
+              <Feather name="chevron-right" size={20} color="#9CA3AF" />
             </TouchableOpacity>
 
             {/* SEO & Marketing */}
-            <TouchableOpacity className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-              <View className="flex-row items-center">
-                <View className="w-12 h-12 bg-orange-100 rounded-xl items-center justify-center mr-4">
-                  <Text className="text-xl">📈</Text>
-                </View>
-                <View className="flex-1">
-                  <Text className="text-xl font-semibold text-gray-900 mb-1">
-                    SEO & Marketing
-                  </Text>
-                  <Text className="text-gray-600">
-                    Optimize for search engines and social media
-                  </Text>
-                </View>
-                <Text className="text-gray-400 text-xl">›</Text>
+            <TouchableOpacity className="bg-white p-4 rounded-lg flex-row items-center">
+              <View className="w-10 h-10 bg-orange-50 rounded-lg items-center justify-center mr-3">
+                <Feather name="trending-up" size={20} color="#F59E0B" />
               </View>
-            </TouchableOpacity>
-
-            {/* Analytics */}
-            <TouchableOpacity className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-              <View className="flex-row items-center">
-                <View className="w-12 h-12 bg-red-100 rounded-xl items-center justify-center mr-4">
-                  <Text className="text-xl">📊</Text>
-                </View>
-                <View className="flex-1">
-                  <Text className="text-xl font-semibold text-gray-900 mb-1">
-                    Analytics
-                  </Text>
-                  <Text className="text-gray-600">
-                    Track website performance and customer behavior
-                  </Text>
-                </View>
-                <Text className="text-gray-400 text-xl">›</Text>
+              <View className="flex-1">
+                <Text className="text-base font-semibold text-gray-900">
+                  SEO & Marketing
+                </Text>
+                <Text className="text-sm text-gray-600 mt-0.5">
+                  Optimize for search engines and social media
+                </Text>
               </View>
+              <Feather name="chevron-right" size={20} color="#9CA3AF" />
             </TouchableOpacity>
-
-            {/* Domain & Hosting */}
-            <TouchableOpacity className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-              <View className="flex-row items-center">
-                <View className="w-12 h-12 bg-indigo-100 rounded-xl items-center justify-center mr-4">
-                  <Text className="text-xl">🔗</Text>
-                </View>
-                <View className="flex-1">
-                  <Text className="text-xl font-semibold text-gray-900 mb-1">
-                    Domain & Hosting
-                  </Text>
-                  <Text className="text-gray-600">
-                    Manage your domain and hosting settings
-                  </Text>
-                </View>
-                <Text className="text-gray-400 text-xl">›</Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-
-          {/* Bottom Section */}
-          <View className="mt-8 mb-8">
-            <View className="bg-white p-4 rounded-xl border border-gray-200">
-              <Text className="text-sm text-gray-600 text-center">
-                Powered by TAR POS • Real-time storefront sync
-              </Text>
-            </View>
           </View>
         </View>
+
+        {/* Bottom Spacing */}
+        <View className="h-8" />
       </ScrollView>
     );
   };
