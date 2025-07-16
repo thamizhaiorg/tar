@@ -24,6 +24,7 @@ import ItemsScreen from "../components/items";
 import FilesScreen from "../components/files";
 import PeopleaScreen from "../screens/peoplea";
 import StoreManagement from "../components/store-mgmt";
+import StorefrontScreen from "../components/storefront";
 
 import BottomNavigation, { BottomTab, MainScreen } from "../components/nav";
 import BottomTabContent from "../components/tabs";
@@ -50,7 +51,8 @@ type Screen =
   | 'locations'
   | 'files'
   | 'profile'
-  | 'store-management';
+  | 'store-management'
+  | 'storefront';
 
 interface NavigationData {
   productId?: string;
@@ -460,6 +462,11 @@ export default function Page() {
           onClose={() => handleNavigate('menu')}
         />;
 
+      case 'storefront':
+        return <StorefrontScreen
+          onClose={() => handleNavigate('menu')}
+        />;
+
       case 'menu':
         return <Workspace
           onNavigate={handleNavigate}
@@ -488,7 +495,7 @@ export default function Page() {
     <StoreProvider>
       <ErrorBoundary>
         <View className="flex flex-1">
-          {currentScreen === 'sales' || currentScreen === 'options' || currentScreen === 'metafields' || currentScreen === 'items' || currentScreen === 'locations' || currentScreen === 'files' || currentScreen === 'profile' || currentScreen === 'store-management' || isProductFormOpen || isCollectionFormOpen || isItemStockOpen ? (
+          {currentScreen === 'sales' || currentScreen === 'options' || currentScreen === 'metafields' || currentScreen === 'items' || currentScreen === 'locations' || currentScreen === 'files' || currentScreen === 'profile' || currentScreen === 'store-management' || currentScreen === 'storefront' || isProductFormOpen || isCollectionFormOpen || isItemStockOpen ? (
             // Full screen screens without header or bottom navigation (including product and collection forms)
             <ErrorBoundary>
               {renderMainContent()}
@@ -740,6 +747,8 @@ function Header({ currentScreen, onNavigate, showBottomTabs, setShowBottomTabs, 
         return { title: 'Metafields', icon: '#' };
       case 'files':
         return { title: 'Files', icon: '📁' };
+      case 'storefront':
+        return { title: 'Storefront', icon: '🌐' };
 
       case 'sales':
         return { title: 'Sales', icon: '💰' };
