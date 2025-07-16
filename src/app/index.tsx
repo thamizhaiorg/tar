@@ -2,7 +2,9 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Text, View, TouchableOpacity, BackHandler, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useAuth } from "../lib/auth-context";
+import { r2Service } from "../lib/r2-service";
 import AuthScreen from "../screens/auth";
 import ProductsScreen from "../components/products";
 import ProductFormScreen from "../components/prod-form";
@@ -11,15 +13,16 @@ import CollectionFormScreen from "../components/col-form";
 import ProductsManagementScreen from "../components/prod-mgmt";
 import CollectionsManagementScreen from "../components/col-mgmt";
 import SpaceScreen from "../components/space";
-import SalesScreen from "../components/sales";
+import SquarePOS from "../components/square-pos";
 import ReportsScreen from "../components/reports";
 import ItemStock from "../components/item-stock";
-import FullScreenMenu from "../components/menu";
+import Workspace from "../components/workspace";
 import Options from "../components/options";
 import MetafieldsSystem from "../components/metafields-system";
 import Locations from "../components/locations";
 import ItemsScreen from "../components/items";
 import FilesScreen from "../components/files";
+import PeopleaScreen from "../screens/peoplea";
 
 import BottomNavigation, { BottomTab, MainScreen } from "../components/nav";
 import BottomTabContent from "../components/tabs";
@@ -44,7 +47,8 @@ type Screen =
   | 'option-edit'
   | 'items'
   | 'locations'
-  | 'files';
+  | 'files'
+  | 'profile';
 
 interface NavigationData {
   productId?: string;
@@ -371,7 +375,10 @@ export default function Page() {
       case 'space':
         return <SpaceScreen onOpenMenu={() => handleNavigate('menu')} />;
       case 'sales':
-        return <SalesScreen onOpenMenu={() => handleNavigate('menu')} />;
+        return <SquarePOS onClose={() => handleNavigate('menu')} onOrderCreated={(orderId) => {
+          // Optionally handle order creation success
+          console.log('Order created:', orderId);
+        }} />;
       case 'reports':
         return <ReportsScreen
           onOpenMenu={() => handleNavigate('menu')}
@@ -441,8 +448,13 @@ export default function Page() {
           onClose={() => handleNavigate('menu')}
         />;
 
+      case 'profile':
+        return <PeopleaScreen
+          onClose={() => handleNavigate('menu')}
+        />;
+
       case 'menu':
-        return <FullScreenMenu
+        return <Workspace
           onNavigate={handleNavigate}
           onClose={() => handleNavigate('space')}
         />;
@@ -469,7 +481,7 @@ export default function Page() {
     <StoreProvider>
       <ErrorBoundary>
         <View className="flex flex-1">
-          {currentScreen === 'menu' || currentScreen === 'options' || currentScreen === 'metafields' || currentScreen === 'items' || currentScreen === 'locations' || currentScreen === 'files' || isProductFormOpen || isCollectionFormOpen || isItemStockOpen ? (
+          {currentScreen === 'options' || currentScreen === 'metafields' || currentScreen === 'items' || currentScreen === 'locations' || currentScreen === 'files' || currentScreen === 'profile' || isProductFormOpen || isCollectionFormOpen || isItemStockOpen ? (
             // Full screen screens without header or bottom navigation (including product and collection forms)
             <ErrorBoundary>
               {renderMainContent()}
@@ -647,6 +659,45 @@ function Header({ currentScreen, onNavigate, showBottomTabs, setShowBottomTabs, 
   isCollectionFormOpen?: boolean;
 }) {
   const insets = useSafeAreaInsets();
+  const { peopleaProfile } = useAuth();
+  const [displayImageUrl, setDisplayImageUrl] = useState<string>('');
+
+  // Set image URL immediately when profile is available
+  useEffect(() => {
+    if (peopleaProfile?.profileImage) {
+      // If it's an R2 URL, generate signed URL
+      if (peopleaProfile.profileImage.includes('r2.cloudflarestorage.com')) {
+        const generateSignedUrl = async () => {
+          try {
+            const key = r2Service.extractKeyFromUrl(peopleaProfile.profileImage);
+            if (key) {
+              const signedUrl = await r2Service.getSignedUrl(key, 3600);
+              if (signedUrl) {
+                setDisplayImageUrl(signedUrl);
+                // Prefetch the image to cache it
+                Image.prefetch(signedUrl);
+              } else {
+                setDisplayImageUrl(peopleaProfile.profileImage);
+              }
+            } else {
+              setDisplayImageUrl(peopleaProfile.profileImage);
+            }
+          } catch (error) {
+            // Keep using original URL on error
+            setDisplayImageUrl(peopleaProfile.profileImage);
+          }
+        };
+        generateSignedUrl();
+      } else {
+        // For non-R2 URLs, use directly
+        setDisplayImageUrl(peopleaProfile.profileImage);
+        // Prefetch non-R2 images too
+        Image.prefetch(peopleaProfile.profileImage);
+      }
+    } else {
+      setDisplayImageUrl('');
+    }
+  }, [peopleaProfile?.profileImage]);
 
   const getScreenInfo = (screen: Screen) => {
     // If product form is open, show product title without "Products:" prefix
@@ -670,6 +721,8 @@ function Header({ currentScreen, onNavigate, showBottomTabs, setShowBottomTabs, 
     switch (screen) {
       case 'space':
         return { title: 'Space', icon: '🌌' };
+      case 'menu':
+        return { title: 'Workspace', icon: '🏢' };
       case 'products':
         return { title: 'Products', icon: '📦' };
       case 'collections':
@@ -695,15 +748,38 @@ function Header({ currentScreen, onNavigate, showBottomTabs, setShowBottomTabs, 
   return (
     <View style={{ paddingTop: insets.top }}>
       <View className="px-4 h-16 flex items-center flex-row justify-between bg-white border-b border-gray-200">
-        <TouchableOpacity
-          onPress={() => onNavigate('menu')}
-          className="flex-row items-center"
-        >
-          <View className="flex-row items-center">
-            <Text className="text-xl mr-2">{screenInfo.icon}</Text>
-            <Text className="text-xl font-semibold text-gray-900">{screenInfo.title}</Text>
-          </View>
-        </TouchableOpacity>
+        <View className="flex-row items-center">
+          {currentScreen === 'menu' ? (
+            <>
+              <TouchableOpacity
+                onPress={() => onNavigate('profile')}
+                className="w-8 h-8 rounded-full overflow-hidden mr-2"
+              >
+                <Image
+                  source={
+                    displayImageUrl && displayImageUrl.length > 0 && displayImageUrl !== ''
+                      ? { uri: displayImageUrl }
+                      : require('../../assets/adaptive-icon.png')
+                  }
+                  style={{ width: 32, height: 32 }}
+                  contentFit="cover"
+                  cachePolicy="memory-disk"
+                />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => onNavigate('menu')}>
+                <Text className="text-xl font-semibold text-gray-900">{screenInfo.title}</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <TouchableOpacity
+              onPress={() => onNavigate('menu')}
+              className="flex-row items-center"
+            >
+              <Text className="text-xl mr-2">{screenInfo.icon}</Text>
+              <Text className="text-xl font-semibold text-gray-900">{screenInfo.title}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
 
       </View>
