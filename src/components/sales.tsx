@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, BackHandler, StatusBar } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { db, formatCurrency } from '../lib/instant';
 import { useStore } from '../lib/store-context';
@@ -30,6 +31,7 @@ interface SalesScreenProps {
 
 export default function SalesScreen({}: SalesScreenProps) {
   const { currentStore } = useStore();
+  const insets = useSafeAreaInsets();
   const [currentView, setCurrentView] = useState<'dashboard' | 'orders' | 'create-order' | 'order-details'>('dashboard');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
@@ -176,7 +178,7 @@ export default function SalesScreen({}: SalesScreenProps) {
     <View className="flex-1 bg-gradient-to-b from-gray-800 to-gray-900">
         <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
           {/* Hero Section - Full width with gradient */}
-          <View className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 pt-16 pb-12">
+          <View className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 pb-12" style={{ paddingTop: insets.top + 16 }}>
             <View className="items-center">
               <Text className="text-white/80 text-lg font-medium mb-3">Today's Revenue</Text>
               <Text className="text-white text-6xl font-bold mb-8">

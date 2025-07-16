@@ -4,10 +4,9 @@ import { useStore } from '../lib/store-context';
 import { useAuth } from '../lib/auth-context';
 import { db } from '../lib/instant';
 import StoreForm from './store-form';
-import StoreManagement from './store-mgmt';
 import ComList from './comlist';
 
-type Screen = 'space' | 'sales' | 'reports' | 'products' | 'collections' | 'options' | 'metafields' | 'menu' | 'items' | 'locations';
+type Screen = 'space' | 'sales' | 'reports' | 'products' | 'collections' | 'options' | 'metafields' | 'menu' | 'items' | 'locations' | 'store-management';
 
 interface WorkspaceProps {
   onNavigate: (screen: Screen) => void;
@@ -17,7 +16,6 @@ interface WorkspaceProps {
 export default function Workspace({ onNavigate, onClose }: WorkspaceProps) {
   const { currentStore } = useStore();
   const [showStoreForm, setShowStoreForm] = useState(false);
-  const [showStoreManagement, setShowStoreManagement] = useState(false);
   const [showComList, setShowComList] = useState(false);
   const [salesMetrics, setSalesMetrics] = useState({ totalSales: 0, orderCount: 0 });
 
@@ -59,10 +57,6 @@ export default function Workspace({ onNavigate, onClose }: WorkspaceProps) {
         setShowStoreForm(false);
         return true;
       }
-      if (showStoreManagement) {
-        setShowStoreManagement(false);
-        return true;
-      }
       if (showComList) {
         setShowComList(false);
         return true;
@@ -76,7 +70,7 @@ export default function Workspace({ onNavigate, onClose }: WorkspaceProps) {
     return () => {
       backHandler.remove();
     };
-  }, [showStoreForm, showStoreManagement, showComList, onClose]);
+  }, [showStoreForm, showComList, onClose]);
 
 
 
@@ -91,7 +85,7 @@ export default function Workspace({ onNavigate, onClose }: WorkspaceProps) {
     } else if (itemId === 'comlist') {
       setShowComList(true);
     } else if (itemId === 'store') {
-      setShowStoreManagement(true);
+      onNavigate('store-management' as Screen);
     } else {
       onNavigate(itemId as Screen);
     }
@@ -107,13 +101,7 @@ export default function Workspace({ onNavigate, onClose }: WorkspaceProps) {
     );
   }
 
-  if (showStoreManagement) {
-    return (
-      <StoreManagement
-        onClose={() => setShowStoreManagement(false)}
-      />
-    );
-  }
+
 
   if (showComList) {
     return (
@@ -154,10 +142,9 @@ export default function Workspace({ onNavigate, onClose }: WorkspaceProps) {
             <View className="flex-1">
               {/* Header */}
               <View className="mb-4">
-                <View className="flex-row items-center justify-between mb-3">
-                  <Text className="text-black text-2xl font-bold">Commerce</Text>
+                <View className="flex-row items-center justify-start mb-3">
                   <TouchableOpacity 
-                    onPress={() => setShowStoreManagement(true)}
+                    onPress={() => handleItemPress('store')}
                     className="px-3 py-1 border border-gray-300"
                     style={{ borderRadius: 6 }}
                   >

@@ -254,104 +254,119 @@ export default function SquarePOS({ onClose, onOrderCreated }: SquarePOSProps) {
     }
   };
 
-  // Payment Screen
+  // Payment Screen - Clean White Background with Flat List Design
   if (showPayment) {
     return (
-      <View className="flex-1 bg-white" style={{ paddingTop: insets.top }}>
-        {/* Header */}
-        <View className="px-6 py-4 border-b border-gray-200">
-          <View className="flex-row items-center justify-between">
-            <TouchableOpacity onPress={() => setShowPayment(false)}>
-              <Feather name="arrow-left" size={24} color="#374151" />
+      <View className="flex-1 bg-white" style={{ paddingTop: insets.top + 10 }}>
+        {/* Simple Header */}
+        <View className="px-6 py-6 bg-white border-b border-gray-200">
+          <View className="flex-row items-center">
+            <TouchableOpacity 
+              onPress={() => setShowPayment(false)}
+              className="mr-4"
+            >
+              <Feather name="arrow-left" size={24} color="#000000" />
             </TouchableOpacity>
-            <Text className="text-lg font-semibold text-gray-900">Payment</Text>
-            <View style={{ width: 24 }} />
+            <Text className="text-xl font-medium text-black">Payment</Text>
           </View>
         </View>
 
-        {/* Total */}
-        <View className="px-6 py-8 items-center">
-          <Text className="text-gray-600 text-lg mb-2">Total</Text>
-          <Text className="text-5xl font-bold text-gray-900">
-            {formatCurrency(cartTotal)}
-          </Text>
+        {/* Total Amount - Centered and Clean */}
+        <View className="flex-1 justify-center items-center px-6">
+          <View className="items-center mb-16">
+            <Text className="text-gray-600 text-lg mb-4">Total</Text>
+            <Text className="text-6xl font-light text-black mb-20">
+              {formatCurrency(cartTotal)}
+            </Text>
+          </View>
+
+          {/* Payment Methods - Flat List Items */}
+          <View className="w-full">
+            <TouchableOpacity
+              onPress={() => processPayment('cash')}
+              disabled={isProcessing}
+              className="flex-row items-center py-6 px-6 border-b border-gray-200"
+            >
+              <Feather name="dollar-sign" size={24} color="#000000" />
+              <Text className="text-black text-xl font-medium ml-4">Cash</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => processPayment('card')}
+              disabled={isProcessing}
+              className="flex-row items-center py-6 px-6"
+            >
+              <Feather name="credit-card" size={24} color="#000000" />
+              <Text className="text-black text-xl font-medium ml-4">Card</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
-        {/* Payment Methods */}
-        <View className="flex-1 px-6">
-          <TouchableOpacity
-            onPress={() => processPayment('cash')}
-            disabled={isProcessing}
-            className="bg-green-600 py-6 rounded-2xl mb-4"
-          >
-            <View className="items-center">
-              <Feather name="dollar-sign" size={32} color="white" />
-              <Text className="text-white text-xl font-bold mt-2">Cash</Text>
-            </View>
-          </TouchableOpacity>
+        {/* Bottom Safe Area */}
+        <View style={{ paddingBottom: Math.max(insets.bottom, 16) }} />
 
-          <TouchableOpacity
-            onPress={() => processPayment('card')}
-            disabled={isProcessing}
-            className="bg-blue-600 py-6 rounded-2xl"
-          >
-            <View className="items-center">
-              <Feather name="credit-card" size={32} color="white" />
-              <Text className="text-white text-xl font-bold mt-2">Card</Text>
+        {/* Processing Indicator */}
+        {isProcessing && (
+          <View className="absolute inset-0 bg-black/20 items-center justify-center">
+            <View className="bg-white px-8 py-6 rounded-2xl items-center">
+              <Text className="text-black text-lg font-medium">Processing...</Text>
             </View>
-          </TouchableOpacity>
-        </View>
+          </View>
+        )}
       </View>
     );
   }
 
-  // Review Screen
+  // Review Screen - Clean, Simple, Flat Design
   if (showReview) {
     return (
-      <View className="flex-1 bg-white" style={{ paddingTop: insets.top }}>
-        {/* Header */}
-        <View className="px-6 py-4 border-b border-gray-200">
-          <View className="flex-row items-center justify-between">
-            <TouchableOpacity onPress={() => setShowReview(false)}>
+      <View className="flex-1 bg-gray-50" style={{ paddingTop: insets.top + 10 }}>
+        {/* Simple Header */}
+        <View className="px-6 py-6 bg-white">
+          <View className="flex-row items-center">
+            <TouchableOpacity 
+              onPress={() => setShowReview(false)}
+              className="mr-4"
+            >
               <Feather name="arrow-left" size={24} color="#374151" />
             </TouchableOpacity>
-            <Text className="text-lg font-semibold text-gray-900">Review Sale</Text>
-            <View style={{ width: 24 }} />
+            <Text className="text-xl font-medium text-gray-900">Review Sale</Text>
           </View>
         </View>
 
-        {/* Cart Items */}
+        {/* Cart Items - Clean List */}
         <ScrollView className="flex-1 px-6 py-4">
           {cart.map((item) => (
-            <View key={item.id} className="flex-row items-center py-4 border-b border-gray-100">
+            <View key={item.id} className="bg-white p-4 mb-3 flex-row items-center justify-between" style={{ borderRadius: 8 }}>
               <View className="flex-1">
-                <Text className="text-lg font-semibold text-gray-900">{item.title}</Text>
+                <Text className="text-lg font-medium text-gray-900">{item.title}</Text>
                 {item.variantTitle && (
-                  <Text className="text-gray-500">{item.variantTitle}</Text>
+                  <Text className="text-gray-500 text-sm mt-1">{item.variantTitle}</Text>
                 )}
-                <Text className="text-gray-600">Qty: {item.qty}</Text>
+                <Text className="text-gray-600 text-sm mt-1">Qty: {item.qty}</Text>
               </View>
-              <Text className="text-lg font-bold text-gray-900">
+              <Text className="text-lg font-semibold text-gray-900">
                 {formatCurrency(item.total)}
               </Text>
             </View>
           ))}
         </ScrollView>
 
-        {/* Total and Continue */}
-        <View className="px-6 py-6 border-t border-gray-200">
+        {/* Total and Continue - Fixed Bottom */}
+        <View className="bg-white px-6 py-6" style={{ paddingBottom: Math.max(insets.bottom, 16) }}>
           <View className="flex-row justify-between items-center mb-6">
-            <Text className="text-2xl font-bold text-gray-900">Total</Text>
-            <Text className="text-3xl font-bold text-gray-900">
+            <Text className="text-2xl font-medium text-gray-900">Total</Text>
+            <Text className="text-3xl font-light text-gray-900">
               {formatCurrency(cartTotal)}
             </Text>
           </View>
 
           <TouchableOpacity
             onPress={() => setShowPayment(true)}
-            className="bg-blue-600 py-4 rounded-xl"
+            className="bg-blue-500 py-4 items-center"
+            style={{ borderRadius: 12 }}
           >
-            <Text className="text-white text-xl font-bold text-center">Continue to Payment</Text>
+            <Text className="text-white text-xl font-medium">Continue to Payment</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -362,7 +377,7 @@ export default function SquarePOS({ onClose, onOrderCreated }: SquarePOSProps) {
   return (
     <View className="flex-1 bg-white">
       {/* Tabs - No top padding, full screen */}
-      <View className="bg-white px-4 py-3 border-b border-gray-200" style={{ paddingTop: insets.top + 12 }}>
+      <View className="bg-white px-4 py-3 border-b border-gray-200" style={{ paddingTop: insets.top + 20 }}>
         <View className="flex-row">
           {[
             { key: 'keypad', label: 'Keypad' },
@@ -505,7 +520,7 @@ export default function SquarePOS({ onClose, onOrderCreated }: SquarePOSProps) {
             </ScrollView>
 
             {/* Total and Review Button */}
-            <View className="px-4 py-4">
+            <View className="px-4 py-4" style={{ paddingBottom: Math.max(insets.bottom, 16) }}>
               <View className="flex-row items-center justify-between mb-4">
                 <View>
                   <Text className="text-sm text-gray-500">Total</Text>

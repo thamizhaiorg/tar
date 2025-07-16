@@ -76,7 +76,7 @@ export default function StoreManagement({ onClose }: StoreManagementProps) {
     <View className="flex-1 bg-white" style={{ paddingTop: insets.top }}>
       {/* Header */}
       <View className="flex-row items-center justify-between px-4 py-3 border-b border-gray-200">
-        <Text className="text-lg font-medium text-gray-900">Stores</Text>
+        <Text className="text-lg font-medium text-gray-900">Commerce</Text>
         <TouchableOpacity onPress={() => setShowForm(true)}>
           <Feather name="plus" size={24} color="#3B82F6" />
         </TouchableOpacity>
