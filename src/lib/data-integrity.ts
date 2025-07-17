@@ -440,8 +440,6 @@ export async function checkStoreIntegrity(storeId: string): Promise<{
     averageHealthScore: number;
   };
 }> {
-  console.log(`Running comprehensive integrity check for store: ${storeId}`);
-  
   const results = {
     products: await checkProductsIntegrity(storeId),
     orders: await checkOrdersIntegrity(storeId),
@@ -460,10 +458,6 @@ export async function checkStoreIntegrity(storeId: string): Promise<{
   results.overall.totalErrors = entities.reduce((sum, entity) => sum + entity.summary.errors, 0);
   results.overall.totalWarnings = entities.reduce((sum, entity) => sum + entity.summary.warnings, 0);
   results.overall.averageHealthScore = entities.reduce((sum, entity) => sum + entity.summary.healthScore, 0) / entities.length;
-  
-  console.log(`
-Integrity Check Summary for Store ${storeId}:
-- Total records checked: ${results.overall.totalRecords}
 - Total errors found: ${results.overall.totalErrors}
 - Total warnings found: ${results.overall.totalWarnings}
 - Average health score: ${results.overall.averageHealthScore.toFixed(1)}/100
@@ -515,8 +509,6 @@ export async function autoFixIntegrityIssues(storeId: string, dryRun: boolean = 
     errors: [],
   };
   
-  console.log(`${dryRun ? 'Dry run' : 'Executing'} auto-fix for store: ${storeId}`);
-  
   try {
     // Get integrity check results
     const integrityResults = await checkStoreIntegrity(storeId);
@@ -530,7 +522,6 @@ export async function autoFixIntegrityIssues(storeId: string, dryRun: boolean = 
           // These are legacy field issues that can be auto-fixed
           if (!dryRun) {
             // Implementation would go here to fix the specific issue
-            console.log(`Would fix: ${issue.message} for record ${issue.recordId}`);
           }
           result.fixed++;
         } else {
@@ -543,6 +534,5 @@ export async function autoFixIntegrityIssues(storeId: string, dryRun: boolean = 
     result.errors.push(error instanceof Error ? error.message : 'Unknown error');
   }
   
-  console.log(`Auto-fix results: ${result.fixed} fixed, ${result.skipped} skipped, ${result.errors.length} errors`);
   return result;
 }

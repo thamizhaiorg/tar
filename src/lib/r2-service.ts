@@ -34,14 +34,9 @@ class R2Service {
   }
 
   private initializeClient() {
-    // ...removed debug log...
-
     if (!validateR2Config()) {
-      console.error('❌ R2Service: R2 configuration is incomplete');
       return;
     }
-
-    // ...removed debug log...
 
     this.client = new S3Client({
       region: r2Config.region,
@@ -52,8 +47,6 @@ class R2Service {
       },
       forcePathStyle: true, // Required for R2
     });
-
-    // ...removed debug log...
   }
 
   async uploadFile(file: MediaFile, prefix: string = 'media'): Promise<UploadResult> {
@@ -75,17 +68,13 @@ class R2Service {
       };
     }
 
-    console.log('Starting file upload:', { name: file.name, type: file.type, size: file.size });
-
     try {
       // Generate unique key for the file
       const key = generateFileKey(file.name, prefix);
-      console.log('Generated file key:', key);
 
       // Read file content with improved error handling
       let body: Uint8Array;
       try {
-        console.log('Fetching file from URI:', file.uri);
         const response = await fetch(file.uri);
         
         if (!response.ok) {
@@ -96,18 +85,13 @@ class R2Service {
         try {
           const arrayBuffer = await response.arrayBuffer();
           body = new Uint8Array(arrayBuffer);
-          console.log('Successfully read file as arrayBuffer, size:', body.byteLength);
         } catch (arrayBufferError) {
-          console.log('ArrayBuffer failed, trying blob approach:', arrayBufferError);
-          
           // Fallback to blob
           const blob = await response.blob();
           const arrayBuffer = await blob.arrayBuffer();
           body = new Uint8Array(arrayBuffer);
-          console.log('Successfully read file as blob->arrayBuffer, size:', body.byteLength);
         }
       } catch (fileReadError) {
-        console.error('File reading failed:', fileReadError);
         return {
           success: false,
           error: `Failed to read file: ${fileReadError instanceof Error ? fileReadError.message : 'Unknown file read error'}`,
@@ -125,7 +109,6 @@ class R2Service {
       }
 
       // Upload to R2
-      console.log('Uploading to R2 with key:', key);
       const command = new PutObjectCommand({
         Bucket: r2Config.bucketName,
         Key: key,
@@ -138,13 +121,10 @@ class R2Service {
 
       // Generate public URL
       const url = getPublicUrl(key);
-      console.log('Upload successful, URL:', url);
 
       return { success: true, url, key };
 
     } catch (error) {
-      console.error('Upload error:', error);
-      
       // Categorize error type
       const errorType = this.categorizeError(error);
       const errorMessage = error instanceof Error ? error.message : 'Upload failed';
@@ -207,11 +187,8 @@ class R2Service {
 
   async deleteFile(key: string): Promise<boolean> {
     if (!this.client) {
-      // Removed error log
       return false;
     }
-
-    // Removed info log
 
     try {
       const command = new DeleteObjectCommand({
@@ -220,11 +197,9 @@ class R2Service {
       });
 
       await this.client.send(command);
-      // Removed info log
       return true;
 
     } catch (error) {
-      console.error('Delete failed:', error);
       return false;
     }
   }
@@ -263,13 +238,10 @@ class R2Service {
   // Extract key from URL
   extractKeyFromUrl(url: string): string | null {
     try {
-      // ...removed debug log...
       const urlObj = new URL(url);
       const key = urlObj.pathname.substring(1); // Remove leading slash
-      // ...removed debug log...
       return key;
     } catch (error) {
-      // ...removed debug log...
       return null;
     }
   }
@@ -311,10 +283,7 @@ class R2Service {
     category: string,
     reference?: string
   ): Promise<UploadResult> {
-    // Removed console log
-
     const structuredPath = this.generateStructuredPath(userId, category, file.name, reference);
-    // Removed console log
 
     // Use the structured path as the key directly
     return this.uploadFileWithCustomKey(file, structuredPath);
@@ -340,13 +309,10 @@ class R2Service {
       };
     }
 
-    console.log('Starting file upload with custom key:', { name: file.name, key });
-
     try {
       // Read file content with improved error handling
       let body: Uint8Array;
       try {
-        console.log('Fetching file from URI:', file.uri);
         const response = await fetch(file.uri);
         
         if (!response.ok) {
@@ -357,18 +323,13 @@ class R2Service {
         try {
           const arrayBuffer = await response.arrayBuffer();
           body = new Uint8Array(arrayBuffer);
-          console.log('Successfully read file as arrayBuffer, size:', body.byteLength);
         } catch (arrayBufferError) {
-          console.log('ArrayBuffer failed, trying blob approach:', arrayBufferError);
-          
           // Fallback to blob
           const blob = await response.blob();
           const arrayBuffer = await blob.arrayBuffer();
           body = new Uint8Array(arrayBuffer);
-          console.log('Successfully read file as blob->arrayBuffer, size:', body.byteLength);
         }
       } catch (fileReadError) {
-        console.error('File reading failed:', fileReadError);
         return {
           success: false,
           error: `Failed to read file: ${fileReadError instanceof Error ? fileReadError.message : 'Unknown file read error'}`,
@@ -386,7 +347,6 @@ class R2Service {
       }
 
       // Upload to R2
-      console.log('Uploading to R2 with custom key:', key);
       const command = new PutObjectCommand({
         Bucket: r2Config.bucketName,
         Key: key,
@@ -399,13 +359,10 @@ class R2Service {
 
       // Generate public URL
       const url = getPublicUrl(key);
-      console.log('Upload successful, URL:', url);
 
       return { success: true, url, key };
 
     } catch (error) {
-      console.error('Upload error:', error);
-      
       // Categorize error type
       const errorType = this.categorizeError(error);
       const errorMessage = error instanceof Error ? error.message : 'Upload failed';
@@ -428,7 +385,6 @@ class R2Service {
   // Generate signed URL for reading files (for private buckets)
   async getSignedUrl(key: string, expiresIn: number = 3600): Promise<string | null> {
     if (!this.client) {
-      console.error('❌ R2Service: R2 client not initialized');
       return null;
     }
 
@@ -441,7 +397,6 @@ class R2Service {
       const signedUrl = await getSignedUrl(this.client, command, { expiresIn });
       return signedUrl;
     } catch (error) {
-      console.error('❌ R2Service: Failed to generate signed URL:', { key, error });
       return null;
     }
   }
@@ -469,7 +424,6 @@ class R2Service {
       if (uploadResult.success) {
         // Delete old file after successful upload
         await this.deleteFile(oldKey);
-        // Removed info log
       }
 
       return uploadResult;

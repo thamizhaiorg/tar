@@ -153,7 +153,6 @@ export default function MetafieldValues({
       setSelectedDefinition(null);
       setEditingValue(null);
     } catch (error) {
-      console.error('Error saving metafield value:', error);
       Alert.alert('Error', `Failed to save metafield value: ${error.message || 'Unknown error'}`);
     }
   };

@@ -93,7 +93,6 @@ export default function EditItemLocations({ item, itemLocations, onClose }: Edit
       setStockLevels(initialStockLevels);
       setOriginalStockLevels({ ...initialStockLevels });
     } catch (error) {
-      console.error('Failed to load data:', error);
       Alert.alert('Error', 'Failed to load data');
     } finally {
       setLoading(false);
@@ -202,7 +201,6 @@ export default function EditItemLocations({ item, itemLocations, onClose }: Edit
 
       onClose();
     } catch (error) {
-      console.error('Failed to save stock levels:', error);
       Alert.alert('Error', 'Failed to save stock levels');
     } finally {
       setSaving(false);

@@ -61,7 +61,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       await db.auth.signOut();
       setPeopleaProfile(null);
     } catch (error) {
-      console.error('Error signing out:', error);
       throw error;
     }
   };
@@ -91,7 +90,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       // The profile will be automatically updated through the query
     } catch (error) {
-      console.error('Error creating peoplea profile:', error);
       throw error;
     }
   };
@@ -113,7 +111,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       // The profile will be automatically updated through the query
     } catch (error) {
-      console.error('Error updating peoplea profile:', error);
       throw error;
     }
   };

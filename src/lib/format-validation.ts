@@ -332,8 +332,6 @@ export class UniquenessValidator {
     // 1. Query the database for existing items with this SKU in this store
     // 2. Exclude the current item if updating (excludeItemId)
     // 3. Return validation result
-
-    console.log(`Validating SKU uniqueness: ${sku} in store ${storeId}`);
     
     // Placeholder implementation
     return {
@@ -354,8 +352,6 @@ export class UniquenessValidator {
     // 1. Query the database for existing orders with this order number
     // 2. Exclude the current order if updating (excludeOrderId)
     // 3. Return validation result
-
-    console.log(`Validating order number uniqueness: ${orderNumber}`);
     
     // Placeholder implementation
     return {
@@ -377,8 +373,6 @@ export class UniquenessValidator {
     // 1. Query the database for existing customers with this email in this store
     // 2. Exclude the current customer if updating (excludeCustomerId)
     // 3. Return validation result
-
-    console.log(`Validating email uniqueness: ${email} in store ${storeId}`);
     
     // Placeholder implementation
     return {

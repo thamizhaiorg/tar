@@ -479,7 +479,6 @@ export class SchemaSnapshotManager {
    */
   public static async saveSnapshot(snapshot: SchemaSnapshot, filePath: string): Promise<void> {
     // In a real implementation, this would save to a file or database
-    console.log(`Saving schema snapshot to ${filePath}:`, snapshot);
   }
 
   /**
@@ -487,7 +486,6 @@ export class SchemaSnapshotManager {
    */
   public static async loadSnapshot(filePath: string): Promise<SchemaSnapshot | null> {
     // In a real implementation, this would load from a file or database
-    console.log(`Loading schema snapshot from ${filePath}`);
     return null;
   }
 }

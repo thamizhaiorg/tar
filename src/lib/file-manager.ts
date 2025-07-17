@@ -41,14 +41,7 @@ export class FileManager {
     const fileId = id();
     const handle = r2Service.generateFileHandle(file.name, options.userId);
 
-    console.log('📝 FileManager: Creating file record:', {
-      fileId,
-      fileName: file.name,
-      uploadResultUrl: uploadResult.url,
-      uploadResultKey: uploadResult.key,
-      handle,
-      options
-    });
+    // Creating file record with metadata
 
     // Fix file type - ensure proper MIME type
     let fileType = file.type || file.mimeType || 'application/octet-stream';
@@ -72,13 +65,12 @@ export class FileManager {
       ...(options.userId && { userId: options.userId })
     };
 
-    console.log('📝 FileManager: File record to be saved:', fileRecord);
+    // File record prepared for saving
 
     await db.transact([
       db.tx.files[fileId].update(fileRecord)
     ]);
 
-    console.log('✅ FileManager: File record saved successfully:', fileId);
     log.info('File record created', 'FileManager', { fileId, handle });
     return fileRecord;
   }

@@ -316,7 +316,7 @@ export async function createRelationshipLookups(storeId: string): Promise<{
     data.collections?.forEach(collection => lookups.collections.set(collection.name, collection.id));
     
   } catch (error) {
-    console.error('Error creating relationship lookups:', error);
+    // Error creating relationship lookups
   }
   
   return lookups;

@@ -113,7 +113,6 @@ export default function PeopleaScreen({ onClose }: PeopleaScreenProps) {
               setDisplayImageUrl(formData.profileImage);
             }
           } catch (error) {
-            console.error('Error generating signed URL:', error);
             setDisplayImageUrl(formData.profileImage);
           }
         } else {
@@ -202,21 +201,15 @@ export default function PeopleaScreen({ onClose }: PeopleaScreenProps) {
             size: asset.fileSize,
           };
 
-          console.log('Uploading profile image:', mediaFile);
-
           // Check if R2 service is properly configured
           const { validateR2Config } = await import('../lib/r2-config');
           if (!validateR2Config()) {
             throw new Error('R2 storage is not properly configured. Please check your environment variables.');
           }
 
-          console.log('R2 configuration validated successfully');
-
           // Use the standard uploadFile method like other components
-          console.log('Calling r2Service.uploadFile with:', { mediaFile, prefix: 'profiles' });
 
           const uploadResult = await r2Service.uploadFile(mediaFile, 'profiles');
-          console.log('Upload result:', JSON.stringify(uploadResult, null, 2));
 
           // Check if we got a valid result
           if (!uploadResult) {
@@ -224,7 +217,6 @@ export default function PeopleaScreen({ onClose }: PeopleaScreenProps) {
           }
 
           if (uploadResult.success && uploadResult.url) {
-            console.log('Profile image uploaded successfully:', uploadResult.url);
             // Update with R2 URL
             setFormData(prev => ({
               ...prev,
@@ -240,8 +232,6 @@ export default function PeopleaScreen({ onClose }: PeopleaScreenProps) {
             }));
           }
         } catch (error) {
-          console.error('Error uploading profile image:', error);
-          
           // Show generic error for unexpected errors
           Alert.alert(
             'Upload Error', 
@@ -259,7 +249,6 @@ export default function PeopleaScreen({ onClose }: PeopleaScreenProps) {
         }
       }
     } catch (error) {
-      console.error('Error picking image:', error);
       Alert.alert('Error', 'Failed to pick image. Please try again.');
     }
   };

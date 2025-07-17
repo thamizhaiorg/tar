@@ -88,7 +88,7 @@ export default function Overview({ onClose, onNavigate }: OverviewProps) {
 
       setItems(result.items || []);
     } catch (error) {
-      console.error('Failed to load items:', error);
+      // Failed to load items
     } finally {
       setLoading(false);
     }

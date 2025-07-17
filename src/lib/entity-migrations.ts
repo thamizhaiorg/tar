@@ -20,8 +20,6 @@ import {
  * Migrate products entity
  */
 export async function migrateProducts(storeId: string, batchSize: number = 100): Promise<MigrationProgress> {
-  console.log('Starting products migration...');
-  
   // Fetch all products for the store
   const { data } = await db.query({
     products: { $: { where: { storeId } } },
@@ -31,7 +29,6 @@ export async function migrateProducts(storeId: string, batchSize: number = 100):
   const progress = createMigrationProgress('products', products.length);
   
   if (products.length === 0) {
-    console.log('No products found to migrate');
     return progress;
   }
   
@@ -63,16 +60,11 @@ export async function migrateProducts(storeId: string, batchSize: number = 100):
         updateMigrationProgress(progress, true);
         
       } catch (error) {
-        console.error(`Error migrating product ${product.id}:`, error);
         updateMigrationProgress(progress, false, product.id, [error instanceof Error ? error.message : 'Unknown error']);
       }
     }
     
-    // Log progress
-    console.log(`Processed ${Math.min(i + batchSize, products.length)}/${products.length} products`);
   }
-  
-  console.log(getMigrationSummary(progress));
   return progress;
 }
 
@@ -80,8 +72,6 @@ export async function migrateProducts(storeId: string, batchSize: number = 100):
  * Migrate orders entity
  */
 export async function migrateOrders(storeId: string, batchSize: number = 100): Promise<MigrationProgress> {
-  console.log('Starting orders migration...');
-  
   // Fetch all orders for the store
   const { data } = await db.query({
     orders: { $: { where: { storeId } } },
@@ -91,7 +81,6 @@ export async function migrateOrders(storeId: string, batchSize: number = 100): P
   const progress = createMigrationProgress('orders', orders.length);
   
   if (orders.length === 0) {
-    console.log('No orders found to migrate');
     return progress;
   }
   
@@ -120,16 +109,11 @@ export async function migrateOrders(storeId: string, batchSize: number = 100): P
         updateMigrationProgress(progress, true);
         
       } catch (error) {
-        console.error(`Error migrating order ${order.id}:`, error);
         updateMigrationProgress(progress, false, order.id, [error instanceof Error ? error.message : 'Unknown error']);
       }
     }
     
-    // Log progress
-    console.log(`Processed ${Math.min(i + batchSize, orders.length)}/${orders.length} orders`);
   }
-  
-  console.log(getMigrationSummary(progress));
   return progress;
 }
 
@@ -137,8 +121,6 @@ export async function migrateOrders(storeId: string, batchSize: number = 100): P
  * Migrate order items entity
  */
 export async function migrateOrderItems(storeId: string, batchSize: number = 100): Promise<MigrationProgress> {
-  console.log('Starting order items migration...');
-  
   // Fetch all order items for the store
   const { data } = await db.query({
     orderitems: { $: { where: { storeId } } },
@@ -148,7 +130,6 @@ export async function migrateOrderItems(storeId: string, batchSize: number = 100
   const progress = createMigrationProgress('orderitems', orderItems.length);
   
   if (orderItems.length === 0) {
-    console.log('No order items found to migrate');
     return progress;
   }
   
@@ -177,16 +158,11 @@ export async function migrateOrderItems(storeId: string, batchSize: number = 100
         updateMigrationProgress(progress, true);
         
       } catch (error) {
-        console.error(`Error migrating order item ${orderItem.id}:`, error);
         updateMigrationProgress(progress, false, orderItem.id, [error instanceof Error ? error.message : 'Unknown error']);
       }
     }
     
-    // Log progress
-    console.log(`Processed ${Math.min(i + batchSize, orderItems.length)}/${orderItems.length} order items`);
   }
-  
-  console.log(getMigrationSummary(progress));
   return progress;
 }
 
@@ -194,8 +170,6 @@ export async function migrateOrderItems(storeId: string, batchSize: number = 100
  * Migrate customers entity
  */
 export async function migrateCustomers(storeId: string, batchSize: number = 100): Promise<MigrationProgress> {
-  console.log('Starting customers migration...');
-  
   // Fetch all customers for the store
   const { data } = await db.query({
     customers: { $: { where: { storeId } } },
@@ -205,7 +179,6 @@ export async function migrateCustomers(storeId: string, batchSize: number = 100)
   const progress = createMigrationProgress('customers', customers.length);
   
   if (customers.length === 0) {
-    console.log('No customers found to migrate');
     return progress;
   }
   
@@ -231,16 +204,11 @@ export async function migrateCustomers(storeId: string, batchSize: number = 100)
         updateMigrationProgress(progress, true);
         
       } catch (error) {
-        console.error(`Error migrating customer ${customer.id}:`, error);
         updateMigrationProgress(progress, false, customer.id, [error instanceof Error ? error.message : 'Unknown error']);
       }
     }
     
-    // Log progress
-    console.log(`Processed ${Math.min(i + batchSize, customers.length)}/${customers.length} customers`);
   }
-  
-  console.log(getMigrationSummary(progress));
   return progress;
 }
 
@@ -248,8 +216,6 @@ export async function migrateCustomers(storeId: string, batchSize: number = 100)
  * Migrate items entity
  */
 export async function migrateItems(storeId: string, batchSize: number = 100): Promise<MigrationProgress> {
-  console.log('Starting items migration...');
-  
   // Fetch all items for the store
   const { data } = await db.query({
     items: { $: { where: { storeId } } },
@@ -259,7 +225,6 @@ export async function migrateItems(storeId: string, batchSize: number = 100): Pr
   const progress = createMigrationProgress('items', items.length);
   
   if (items.length === 0) {
-    console.log('No items found to migrate');
     return progress;
   }
   
@@ -285,16 +250,11 @@ export async function migrateItems(storeId: string, batchSize: number = 100): Pr
         updateMigrationProgress(progress, true);
         
       } catch (error) {
-        console.error(`Error migrating item ${item.id}:`, error);
         updateMigrationProgress(progress, false, item.id, [error instanceof Error ? error.message : 'Unknown error']);
       }
     }
     
-    // Log progress
-    console.log(`Processed ${Math.min(i + batchSize, items.length)}/${items.length} items`);
   }
-  
-  console.log(getMigrationSummary(progress));
   return progress;
 }
 
@@ -371,8 +331,6 @@ export async function migrateStore(storeId: string): Promise<{
   customers: MigrationProgress;
   items: MigrationProgress;
 }> {
-  console.log(`Starting complete migration for store: ${storeId}`);
-  
   const results = {
     products: await migrateProducts(storeId),
     orders: await migrateOrders(storeId),
@@ -385,14 +343,6 @@ export async function migrateStore(storeId: string): Promise<{
   const totalRecords = Object.values(results).reduce((sum, progress) => sum + progress.total, 0);
   const totalSuccessful = Object.values(results).reduce((sum, progress) => sum + progress.successful, 0);
   const totalFailed = Object.values(results).reduce((sum, progress) => sum + progress.failed, 0);
-  
-  console.log(`
-Complete Migration Summary for Store ${storeId}:
-- Total records processed: ${totalRecords}
-- Successful migrations: ${totalSuccessful}
-- Failed migrations: ${totalFailed}
-- Overall success rate: ${((totalSuccessful / totalRecords) * 100).toFixed(1)}%
-  `);
   
   return results;
 }
@@ -407,8 +357,6 @@ export async function dryRunMigration(storeId: string, entity: string, limit: nu
     validation: { isValid: boolean; errors: string[] };
   }>;
 }> {
-  console.log(`Running dry migration for ${entity} (limit: ${limit})`);
-  
   // Fetch sample records
   const { data } = await db.query({
     [entity]: { $: { where: { storeId }, limit } },

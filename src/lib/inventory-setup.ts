@@ -105,7 +105,6 @@ export async function migrateItemsToLocationSystem(storeId: string): Promise<voi
 
     // Get default location for the store
     const defaultLocationId = await createDefaultLocation(storeId);
-    console.log(`Using default location: ${defaultLocationId}`);
 
     // Get all items for the store
     const items = await db.queryOnce({
@@ -119,11 +118,8 @@ export async function migrateItemsToLocationSystem(storeId: string): Promise<voi
     });
 
     if (!items.data.items || items.data.items.length === 0) {
-      console.log('No items found for migration');
       return;
     }
-
-    console.log(`Found ${items.data.items.length} items to migrate`);
 
     // Process items in smaller batches to avoid transaction limits
     const batchSize = 10;
@@ -149,7 +145,6 @@ export async function migrateItemsToLocationSystem(storeId: string): Promise<voi
           });
 
           if (existingItemLocation.data.ilocations && existingItemLocation.data.ilocations.length > 0) {
-            console.log(`Item ${item.id} already has location record, skipping`);
             continue;
           }
 
@@ -254,7 +249,6 @@ export async function updateItemTotals(itemId: string): Promise<void> {
       })
     ]);
   } catch (error) {
-    console.error('Failed to update item totals:', error);
     throw error;
   }
 }
@@ -299,7 +293,6 @@ export async function createInventoryAdjustment(
       db.tx.iadjust[adjustmentId].update(adjustmentData)
     ]);
   } catch (error) {
-    console.error('Failed to create inventory adjustment:', error);
     throw error;
   }
 }
@@ -322,7 +315,6 @@ export async function getStoreLocations(storeId: string): Promise<Location[]> {
 
     return result.data.locations || [];
   } catch (error) {
-    console.error('Failed to get store locations:', error);
     return [];
   }
 }
@@ -345,7 +337,6 @@ export async function getItemStock(itemId: string): Promise<ItemLocation[]> {
 
     return result.data.ilocations || [];
   } catch (error) {
-    console.error('Failed to get item stock:', error);
     return [];
   }
 }
@@ -356,18 +347,14 @@ export async function getItemStock(itemId: string): Promise<ItemLocation[]> {
  */
 export async function initializeInventorySystem(): Promise<void> {
   try {
-    console.log('🏗️ Initializing inventory system...');
-
     // Get all stores
     const storesResult = await db.queryOnce({
       store: {}
     });
 
     const stores = storesResult.data.store || [];
-    console.log(`Found ${stores.length} stores to initialize`);
 
     if (stores.length === 0) {
-      console.log('No stores found, skipping inventory initialization');
       return;
     }
 
@@ -376,8 +363,6 @@ export async function initializeInventorySystem(): Promise<void> {
 
     for (const store of stores) {
       try {
-        console.log(`Initializing inventory for store: ${store.name || store.id}`);
-
         // Create default location for the store
         await createDefaultLocation(store.id, store.name);
 
@@ -385,10 +370,8 @@ export async function initializeInventorySystem(): Promise<void> {
         await migrateItemsToLocationSystem(store.id);
 
         successCount++;
-        console.log(`✅ Successfully initialized store: ${store.name || store.id}`);
       } catch (storeError) {
         errorCount++;
-        console.error(`❌ Failed to initialize store ${store.name || store.id}:`, storeError);
         // Continue with other stores
       }
     }

@@ -124,7 +124,6 @@ export default function ItemStock({ item, onClose, onSave }: ItemStockProps) {
 
 
     } catch (error) {
-      console.error('Failed to load item data:', error);
       Alert.alert('Error', 'Failed to load item data');
     } finally {
       setLoading(false);
@@ -146,12 +145,9 @@ export default function ItemStock({ item, onClose, onSave }: ItemStockProps) {
 
   const handleAddLocation = async (locationId: string) => {
     try {
-      console.log('Adding location:', locationId, 'to item:', item.id);
-
       // Check if location already exists for this item
       const existingLocation = itemLocations.find(loc => loc.locationId === locationId);
       if (existingLocation) {
-        console.log('Location already exists for this item');
         Alert.alert('Info', 'This location is already added to this item');
         setShowLocationSelector(false);
         return;
@@ -159,8 +155,6 @@ export default function ItemStock({ item, onClose, onSave }: ItemStockProps) {
 
       const timestamp = new Date().toISOString();
       const newItemLocationId = id();
-
-      console.log('Creating item location with ID:', newItemLocationId);
 
       // Create new item location record with proper links
       await db.transact([
@@ -181,15 +175,12 @@ export default function ItemStock({ item, onClose, onSave }: ItemStockProps) {
         })
       ]);
 
-      console.log('Successfully created item location, reloading data...');
-
       // Reload data to show the new location
       await loadItemData();
       setShowLocationSelector(false);
 
 
     } catch (error) {
-      console.error('Failed to add location:', error);
       Alert.alert('Error', 'Failed to add location: ' + (error.message || error));
     }
   };
@@ -292,7 +283,6 @@ export default function ItemStock({ item, onClose, onSave }: ItemStockProps) {
             <Text className="text-base font-medium text-gray-900">Stock by location</Text>
             <TouchableOpacity
               onPress={() => {
-                console.log('Plus button pressed, opening location selector');
                 setShowLocationSelector(true);
               }}
               className="w-8 h-8 items-center justify-center"

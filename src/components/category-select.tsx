@@ -118,7 +118,6 @@ export default function CategorySelect({ selectedCategory, onSelect, onClose }: 
       onSelect(categoryId);
       onClose();
     } catch (error) {
-      console.error('Error adding category:', error);
       Alert.alert('Error', 'Failed to add category');
     }
   };
@@ -154,7 +153,6 @@ export default function CategorySelect({ selectedCategory, onSelect, onClose }: 
       setDeleteConfirmText('');
       setShowDeleteConfirm(false);
     } catch (error) {
-      console.error('Error editing category:', error);
       Alert.alert('Error', 'Failed to edit category');
     }
   };
@@ -172,7 +170,6 @@ export default function CategorySelect({ selectedCategory, onSelect, onClose }: 
       setDeleteConfirmText('');
       setShowDeleteConfirm(false);
     } catch (error) {
-      console.error('Error deleting category:', error);
       Alert.alert('Error', 'Failed to delete category');
     }
   };

@@ -128,7 +128,6 @@ export default function MetafieldDefinitions({
       setEditingDefinition(null);
       setShowAddModal(false);
     } catch (error) {
-      console.error('Error saving metafield set:', error);
       Alert.alert('Error', `Failed to save metafield set: ${error.message || 'Unknown error'}`);
     }
   };

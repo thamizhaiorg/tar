@@ -11,8 +11,6 @@ import { SchemaValidator, type SchemaInconsistency } from './schema-analysis';
  * Demonstrates field naming validation
  */
 export function demoFieldNamingValidation(): void {
-  console.log('🔍 Field Naming Validation Demo');
-  console.log('===============================\n');
 
   const testFields = [
     { name: 'createdAt', type: 'date' },
@@ -27,14 +25,6 @@ export function demoFieldNamingValidation(): void {
   for (const field of testFields) {
     const result = SchemaValidator.validateFieldNaming(field.name);
     const status = result.isValid ? '✅' : '❌';
-    
-    console.log(`${status} ${field.name}`);
-    if (!result.isValid) {
-      for (const issue of result.issues) {
-        console.log(`   - ${issue}`);
-      }
-    }
-    console.log('');
   }
 }
 
@@ -42,8 +32,6 @@ export function demoFieldNamingValidation(): void {
  * Demonstrates data type validation
  */
 export function demoDataTypeValidation(): void {
-  console.log('🔍 Data Type Validation Demo');
-  console.log('============================\n');
 
   const testFields = [
     { name: 'createdAt', type: 'date' },
@@ -58,14 +46,6 @@ export function demoDataTypeValidation(): void {
   for (const field of testFields) {
     const result = SchemaValidator.validateDataType(field.name, field.type);
     const status = result.isValid ? '✅' : '❌';
-    
-    console.log(`${status} ${field.name}: ${field.type}`);
-    if (!result.isValid) {
-      for (const issue of result.issues) {
-        console.log(`   - ${issue}`);
-      }
-    }
-    console.log('');
   }
 }
 
@@ -73,8 +53,6 @@ export function demoDataTypeValidation(): void {
  * Demonstrates relationship validation
  */
 export function demoRelationshipValidation(): void {
-  console.log('🔍 Relationship Validation Demo');
-  console.log('===============================\n');
 
   const testRelationships = [
     { entity: 'products', field: 'brandId', related: 'brands' },
@@ -87,14 +65,6 @@ export function demoRelationshipValidation(): void {
   for (const rel of testRelationships) {
     const result = SchemaValidator.validateRelationship(rel.entity, rel.field, rel.related);
     const status = result.isValid ? '✅' : '❌';
-    
-    console.log(`${status} ${rel.entity}.${rel.field} -> ${rel.related}`);
-    if (!result.isValid) {
-      for (const issue of result.issues) {
-        console.log(`   - ${issue}`);
-      }
-    }
-    console.log('');
   }
 }
 
@@ -102,8 +72,6 @@ export function demoRelationshipValidation(): void {
  * Simulates schema inconsistencies that would be found in the actual schema
  */
 export function demoSchemaInconsistencies(): void {
-  console.log('🚨 Common Schema Inconsistencies Demo');
-  console.log('====================================\n');
 
   // Simulate the types of inconsistencies we'd find in the real schema
   const mockInconsistencies: SchemaInconsistency[] = [
@@ -158,15 +126,9 @@ export function demoSchemaInconsistencies(): void {
   }, {} as Record<string, SchemaInconsistency[]>);
 
   for (const [severity, issues] of Object.entries(groupedBySeverity)) {
-    console.log(`🔴 ${severity.toUpperCase()} Issues (${issues.length}):`);
-    console.log('─'.repeat(50));
-    
     for (const issue of issues) {
-      console.log(`\n📍 ${issue.entity}${issue.field ? `.${issue.field}` : ''}`);
-      console.log(`   Issue: ${issue.issue}`);
-      console.log(`   💡 ${issue.suggestion}`);
+      // Process issues silently
     }
-    console.log('');
   }
 }
 
@@ -174,19 +136,10 @@ export function demoSchemaInconsistencies(): void {
  * Runs all demo functions
  */
 export function runAllDemos(): void {
-  console.log('🚀 Schema Analysis Utilities Demo');
-  console.log('=================================\n');
-
   demoFieldNamingValidation();
   demoDataTypeValidation();
   demoRelationshipValidation();
   demoSchemaInconsistencies();
-
-  console.log('✅ Demo completed! These utilities can help identify and fix schema inconsistencies.');
-  console.log('\n🎯 Next Steps:');
-  console.log('- Run the actual schema analysis with: npm run analyze-schema');
-  console.log('- Use these utilities in your schema optimization tasks');
-  console.log('- Create snapshots before making changes for comparison');
 }
 
 // Run demo if this file is executed directly

@@ -120,9 +120,8 @@ class MigrationStatusManager {
     try {
       // In a real implementation, this would load from AsyncStorage or database
       // For now, we'll use a simple in-memory approach
-      console.log('Migration status manager initialized');
     } catch (error) {
-      console.warn('Failed to load persisted migration statuses:', error);
+      // Failed to load persisted migration statuses
     }
   }
   
@@ -132,9 +131,8 @@ class MigrationStatusManager {
   private async persistStatus(status: MigrationStatus): Promise<void> {
     try {
       // In a real implementation, this would save to AsyncStorage or database
-      console.log(`Persisting migration status for ${status.storeId}:${status.entity}`);
     } catch (error) {
-      console.warn('Failed to persist migration status:', error);
+      // Failed to persist migration status
     }
   }
   
@@ -406,8 +404,6 @@ export class MigrationRollback {
   } = {}): Promise<void> {
     const { version = '1.0.0', description, validateIntegrity = true } = options;
     
-    console.log(`Creating backup for ${entity} in store ${storeId}`);
-    
     const { data } = await db.query({
       [entity]: { $: { where: { storeId } } },
     });
@@ -434,8 +430,6 @@ export class MigrationRollback {
     };
     
     this.backups.set(backupKey, backupData);
-    
-    console.log(`Backup created: ${records.length} records for ${entity} (version: ${version})`);
   }
   
   /**
@@ -468,8 +462,6 @@ export class MigrationRollback {
       }
     }
     
-    console.log(`Restoring ${backup.records.length} records for ${entity}`);
-    
     try {
       // Delete current records
       const { data } = await db.query({
@@ -501,10 +493,7 @@ export class MigrationRollback {
       // Record rollback in history
       this.recordRollback(storeId, entity, backup.metadata.version);
       
-      console.log(`Successfully restored ${backup.records.length} records for ${entity}`);
-      
     } catch (error) {
-      console.error(`Failed to restore backup for ${entity}:`, error);
       throw new Error(`Rollback failed for ${entity} in store ${storeId}: ${error}`);
     }
   }
@@ -948,7 +937,6 @@ export function createCompatibilityMiddleware() {
         
         return result;
       } catch (error) {
-        console.error(`Compatibility middleware error for ${entity}:`, error);
         throw error;
       }
     },
@@ -1389,8 +1377,6 @@ export async function emergencyRollback(
   const rolledBackEntities: string[] = [];
   const errors: Array<{ entity: string; error: string }> = [];
   
-  console.log(`Starting emergency rollback for store ${storeId}. Reason: ${reason || 'Not specified'}`);
-  
   for (const entity of entities) {
     try {
       // Create emergency backup if requested
@@ -1413,13 +1399,10 @@ export async function emergencyRollback(
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       errors.push({ entity, error: errorMessage });
-      console.error(`Emergency rollback failed for ${entity}:`, error);
     }
   }
   
   const success = errors.length === 0;
-  
-  console.log(`Emergency rollback completed. Success: ${success}, Entities rolled back: ${rolledBackEntities.length}, Errors: ${errors.length}`);
   
   return {
     success,

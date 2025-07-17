@@ -258,7 +258,6 @@ export default function Metafields({ productId, onClose, showHeader = true }: Me
       });
       setShowAddModal(false);
     } catch (error) {
-      console.error('Error adding metafield:', error);
       Alert.alert('Error', `Failed to add metafield: ${error.message || 'Unknown error'}`);
     }
   };

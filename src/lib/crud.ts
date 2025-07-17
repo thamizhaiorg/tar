@@ -128,7 +128,6 @@ export const createProduct = async (data: CreateProductData) => {
     await db.transact([db.tx.products[productId].update(productData)]);
     return { success: true, id: productId };
   } catch (error) {
-    console.error('Error creating product:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 };
@@ -178,7 +177,6 @@ export const updateProduct = async (productId: string, data: UpdateProductData) 
     await db.transact([db.tx.products[productId].update(updateData)]);
     return { success: true };
   } catch (error) {
-    console.error('Error updating product:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 };
@@ -266,7 +264,6 @@ export const updateCollection = async (collectionId: string, data: UpdateCollect
     await db.transact(db.tx.collections[collectionId].update(updateData));
     return { success: true };
   } catch (error) {
-    console.error('Error updating collection:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 };
@@ -277,7 +274,6 @@ export const deleteCollection = async (collectionId: string) => {
     await db.transact(db.tx.collections[collectionId].delete());
     return { success: true };
   } catch (error) {
-    console.error('Error deleting collection:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 };
@@ -293,7 +289,6 @@ export const getCollectionByName = async (name: string) => {
     });
     return { success: true, collection: data.collections[0] || null };
   } catch (error) {
-    console.error('Error getting collection by name:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 };

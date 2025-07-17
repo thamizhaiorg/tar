@@ -223,7 +223,6 @@ export default function OrderCreate({ onClose, onOrderCreated }: OrderCreateProp
       hapticFeedback.success();
       onOrderCreated(orderId);
     } catch (error) {
-      console.error('Error creating order:', error);
       hapticFeedback.error();
       Alert.alert('Error', 'Failed to create order');
     } finally {

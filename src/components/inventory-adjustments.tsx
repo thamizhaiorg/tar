@@ -105,7 +105,6 @@ export default function InventoryAdjustments({ onClose, onNavigate }: InventoryA
 
       setItemLocations(result.ilocations || []);
     } catch (error) {
-      console.error('Failed to load item locations:', error);
       Alert.alert('Error', 'Failed to load inventory data');
     } finally {
       setLoading(false);
@@ -191,7 +190,6 @@ export default function InventoryAdjustments({ onClose, onNavigate }: InventoryA
       loadItemLocations();
       Alert.alert('Success', 'Stock adjustment saved successfully');
     } catch (error) {
-      console.error('Failed to save adjustment:', error);
       Alert.alert('Error', 'Failed to save adjustment');
     } finally {
       setSaving(false);
