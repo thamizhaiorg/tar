@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { View, Text, TouchableOpacity, Alert, TextInput, BackHandler, Modal, ScrollView, Keyboard, Platform, KeyboardAvoidingView, StyleSheet } from 'react-native';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { View, Text, TouchableOpacity, Alert, TextInput, BackHandler, Modal, ScrollView, Keyboard, Platform, KeyboardAvoidingView, StyleSheet, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { id } from '@instantdb/react-native';
 import { MaterialIcons, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -247,6 +247,33 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
   const [showMetafieldValueEditor, setShowMetafieldValueEditor] = useState(false);
   const [currentEditingField, setCurrentEditingField] = useState<any>(null);
   const [tempFieldValue, setTempFieldValue] = useState('');
+  const [showItemGenerationLoading, setShowItemGenerationLoading] = useState(false);
+  const [itemGenerationProgress, setItemGenerationProgress] = useState('');
+  const [itemGenerationPercentage, setItemGenerationPercentage] = useState(0);
+  
+  // Animation for rotating circle
+  const rotationAnim = useRef(new Animated.Value(0)).current;
+
+  // Start rotation animation when loading begins
+  useEffect(() => {
+    if (showItemGenerationLoading) {
+      // Start continuous rotation
+      const startRotation = () => {
+        rotationAnim.setValue(0);
+        Animated.loop(
+          Animated.timing(rotationAnim, {
+            toValue: 1,
+            duration: 2000,
+            useNativeDriver: true,
+          })
+        ).start();
+      };
+      startRotation();
+    } else {
+      // Stop rotation when loading ends
+      rotationAnim.stopAnimation();
+    }
+  }, [showItemGenerationLoading, rotationAnim]);
 
   // Memoized computations for better performance
   const selectedMetafields = useMemo(() => {
@@ -836,8 +863,15 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
       return;
     }
 
+    // Show full-screen loading immediately - no delay
+    setShowItemGenerationLoading(true);
+    setItemGenerationProgress('Preparing to generate items...');
+    setItemGenerationPercentage(0);
+
     try {
       // First, delete all existing items for this product
+      setItemGenerationProgress('Removing existing items...');
+      setItemGenerationPercentage(10);
       const existingItems = productItemsData?.items || [];
       if (existingItems.length > 0) {
         const deletePromises = existingItems.map((item: any) =>
@@ -847,6 +881,8 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
       }
 
       // Group selected values by their group field
+      setItemGenerationProgress('Processing option combinations...');
+      setItemGenerationPercentage(20);
       const groupMap = new Map<string, any[]>();
       selectedValues.forEach((value: any) => {
         const group = value.group || 'Group 1';
@@ -878,8 +914,13 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
       };
 
       const combinations = generateCombinations(optionArrays);
+      setItemGenerationProgress(`Creating ${combinations.length} item variants...`);
+      setItemGenerationPercentage(30);
 
-      // Generate items for each combination
+      // Generate items for each combination with progress updates
+      const totalItems = combinations.length;
+      let completedItems = 0;
+
       const itemPromises = combinations.map(async (combination: any[], index: number) => {
         const itemId = id();
 
@@ -941,13 +982,19 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
           // Don't fail item creation if location stock creation fails
         }
 
+        // Update progress
+        completedItems++;
+        const progress = 30 + Math.floor((completedItems / totalItems) * 50); // 30-80% for item creation
+        setItemGenerationPercentage(progress);
+
         return Promise.resolve();
       });
 
       await Promise.all(itemPromises);
 
       // Update product options field for storefront display
-      // Group selected values by their group field
+      setItemGenerationProgress('Updating product options...');
+      setItemGenerationPercentage(85);
       const optionsGroupMap = new Map<string, any[]>();
       selectedValues.forEach((value: any) => {
         const group = value.group || 'Group 1';
@@ -973,12 +1020,21 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
         })
       );
 
-      // Close the option values selector and show success
+      setItemGenerationProgress('Finalizing...');
+      setItemGenerationPercentage(95);
+      
+      // Add a small delay to show completion
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setItemGenerationPercentage(100);
+
+      // Hide loading screen and close modals
+      setShowItemGenerationLoading(false);
       setShowOptionValuesSelector(false);
       setCurrentOptionSet(null);
       setShowOptionSetSelector(false);
 
     } catch (error) {
+      setShowItemGenerationLoading(false);
       log.error('Failed to generate items', 'ProductForm', { error: error instanceof Error ? error.message : 'Unknown error' });
       Alert.alert('Error', 'Failed to generate items. Please try again.');
     }
@@ -2943,6 +2999,120 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
         title="Select Medias"
         reference={`product-${formData.title || 'new'}`}
       />
+
+      {/* Item Generation Loading Screen */}
+      <Modal
+        visible={showItemGenerationLoading}
+        animationType="none"
+        presentationStyle="overFullScreen"
+        transparent={false}
+        onRequestClose={() => {}}
+      >
+        <View style={{
+          flex: 1,
+          backgroundColor: '#fff',
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingHorizontal: 40,
+        }}>
+          {/* Circular Progress Indicator */}
+          <View style={{
+            width: 120,
+            height: 120,
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: 40,
+          }}>
+            {/* Background Circle */}
+            <View style={{
+              position: 'absolute',
+              width: 120,
+              height: 120,
+              borderRadius: 60,
+              borderWidth: 6,
+              borderColor: '#E5E7EB',
+            }} />
+            
+            {/* Animated Rotating Gradient Circle */}
+            <Animated.View style={{
+              position: 'absolute',
+              width: 120,
+              height: 120,
+              borderRadius: 60,
+              borderWidth: 8,
+              borderColor: 'transparent',
+              borderTopColor: '#3B82F6',
+              borderRightColor: '#60A5FA',
+              transform: [{
+                rotate: rotationAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ['0deg', '360deg'],
+                })
+              }],
+            }} />
+            
+            {/* Second Rotating Gradient Circle - Offset */}
+            <Animated.View style={{
+              position: 'absolute',
+              width: 120,
+              height: 120,
+              borderRadius: 60,
+              borderWidth: 8,
+              borderColor: 'transparent',
+              borderBottomColor: '#93C5FD',
+              borderLeftColor: '#DBEAFE',
+              transform: [{
+                rotate: rotationAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ['180deg', '540deg'],
+                })
+              }],
+            }} />
+            
+            {/* Progress Circle Overlay */}
+            <View style={{
+              position: 'absolute',
+              width: 104,
+              height: 104,
+              borderRadius: 52,
+              borderWidth: 4,
+              borderColor: 'transparent',
+              borderTopColor: itemGenerationPercentage > 0 ? '#1E40AF' : 'transparent',
+              transform: [{ rotate: `${(itemGenerationPercentage / 100) * 360}deg` }],
+            }} />
+            
+            {/* Percentage Text */}
+            <Text style={{
+              fontSize: 24,
+              fontWeight: '700',
+              color: '#111827',
+            }}>
+              {itemGenerationPercentage}%
+            </Text>
+          </View>
+
+          {/* Title */}
+          <Text style={{
+            fontSize: 28,
+            fontWeight: '700',
+            color: '#111827',
+            textAlign: 'center',
+            marginBottom: 16,
+          }}>
+            Generating Items
+          </Text>
+
+          {/* Progress Text */}
+          <Text style={{
+            fontSize: 16,
+            color: '#6B7280',
+            textAlign: 'center',
+            lineHeight: 24,
+          }}>
+            {itemGenerationProgress}
+          </Text>
+        </View>
+      </Modal>
 
     </View>
   );

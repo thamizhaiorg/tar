@@ -35,8 +35,6 @@ export default function OptionValuesSelector({
   const insets = useSafeAreaInsets();
   const [selectedValues, setSelectedValues] = useState<string[]>([]);
   const [activeGroup, setActiveGroup] = useState<string>('');
-  const [showNotification, setShowNotification] = useState(false);
-  const [notificationMessage, setNotificationMessage] = useState('');
 
   // ...existing code...
 
@@ -48,15 +46,7 @@ export default function OptionValuesSelector({
     }
   }, [optionSet]);
 
-  // Auto-hide notification
-  useEffect(() => {
-    if (showNotification) {
-      const timer = setTimeout(() => {
-        setShowNotification(false);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [showNotification]);
+
 
   // Query option values for the current option set
   const { data: optionValuesData } = db.useQuery(
@@ -111,16 +101,11 @@ export default function OptionValuesSelector({
 
   const handleGenerate = async () => {
     if (selectedValues.length === 0) {
-      setNotificationMessage('Please select at least one option value');
-      setShowNotification(true);
+      Alert.alert('Error', 'Please select at least one option value');
       return;
     }
 
     try {
-      // Show progress notification
-      setNotificationMessage('Generating items...');
-      setShowNotification(true);
-
       const selectedValueObjects = optionValues.filter(value =>
         selectedValues.includes(value.id)
       );
@@ -139,21 +124,15 @@ export default function OptionValuesSelector({
         }))
       };
 
-      await onGenerate(selectedValueObjects, optionSetData);
-
-      // Show success notification
-      const combinations = selectedValueObjects.length; // This is simplified, actual combinations would be calculated
-      setNotificationMessage(`Generated ${combinations} item variants successfully`);
-
-      // Auto-close after showing success
-      setTimeout(() => {
-        setShowNotification(false);
-        onClose();
-      }, 2000);
+      // Start generation immediately - this will show the loading screen
+      // Don't await here to avoid modal conflicts
+      onGenerate(selectedValueObjects, optionSetData);
+      
+      // Close this modal immediately to avoid conflicts
+      onClose();
 
     } catch (error) {
-      setNotificationMessage('Failed to generate items. Please try again.');
-      setShowNotification(true);
+      Alert.alert('Error', 'Failed to generate items. Please try again.');
     }
   };
 
@@ -169,28 +148,7 @@ export default function OptionValuesSelector({
       onRequestClose={onClose}
     >
       <View style={{ flex: 1, backgroundColor: '#fff' }}>
-        {/* Notification Bar */}
-        {showNotification && (
-          <View style={{
-            position: 'absolute',
-            top: insets.top,
-            left: 0,
-            right: 0,
-            backgroundColor: '#111827',
-            paddingVertical: 12,
-            paddingHorizontal: 20,
-            zIndex: 1000,
-          }}>
-            <Text style={{
-              color: '#fff',
-              fontSize: 14,
-              fontWeight: '500',
-              textAlign: 'center',
-            }}>
-              {notificationMessage}
-            </Text>
-          </View>
-        )}
+
 
         {/* Header */}
         <View style={{
