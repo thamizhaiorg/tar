@@ -134,15 +134,26 @@ export default function ItemsScreen({ isGridView = false, onItemFormOpen, onItem
   const [selectedItemForPricing, setSelectedItemForPricing] = useState<any>(null);
 
 
-  // Query items from database - filter by productId if provided
+  // Query items from database with optimized schema - filter by productId if provided
   const { data, isLoading, error } = db.useQuery({
     items: {
       $: {
         where: productId
           ? { storeId: currentStore?.id || '', productId: productId }
-          : { storeId: currentStore?.id || '' }
+          : { storeId: currentStore?.id || '' },
+        order: {
+          sku: 'asc' // Use indexed field for ordering
+        }
       },
-      product: {}
+      product: {
+        brand: {}, // Include relationship data
+        category: {},
+        type: {},
+        vendor: {}
+      },
+      ilocations: { // Use enhanced inventory location tracking
+        location: {}
+      }
     }
   });
 
@@ -506,7 +517,12 @@ export default function ItemsScreen({ isGridView = false, onItemFormOpen, onItem
                         }}
                       >
                         <Text style={{ fontSize: 15, fontWeight: '600', color: '#111827' }}>
-                          {item.totalOnHand || item.onhand || 0}
+                          {(() => {
+                            // Use enhanced inventory location tracking
+                            const totalStock = item.ilocations?.reduce((sum: number, location: any) => 
+                              sum + (location.onHand || 0), 0) || item.totalOnHand || item.onhand || 0;
+                            return totalStock;
+                          })()}
                         </Text>
                       </TouchableOpacity>
                     )}

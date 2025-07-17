@@ -39,13 +39,16 @@ export default function BrandSelect({ selectedBrand, onSelect, onClose }: BrandS
     return () => backHandler.remove();
   }, [onClose]);
 
-  // Query brands from database
+  // Query brands from database with optimized schema
   const { isLoading, error, data } = db.useQuery(
     currentStore?.id ? {
       brands: {
         $: {
           where: {
             storeId: currentStore.id
+          },
+          order: {
+            name: 'asc' // Use indexed field for ordering
           }
         }
       }
@@ -98,7 +101,7 @@ export default function BrandSelect({ selectedBrand, onSelect, onClose }: BrandS
     );
 
     if (existingBrand) {
-      onSelect(existingBrand.name);
+      onSelect(existingBrand.id);
       onClose();
       return;
     }
@@ -109,8 +112,9 @@ export default function BrandSelect({ selectedBrand, onSelect, onClose }: BrandS
         storeId: currentStore.id,
       };
 
-      await db.transact(db.tx.brands[id()].update(newBrand));
-      onSelect(searchQuery.trim());
+      const brandId = id();
+      await db.transact(db.tx.brands[brandId].update(newBrand));
+      onSelect(brandId);
       onClose();
     } catch (error) {
       console.error('Error adding brand:', error);
@@ -119,7 +123,7 @@ export default function BrandSelect({ selectedBrand, onSelect, onClose }: BrandS
   };
 
   const handleSelectBrand = (brand: BrandItem) => {
-    onSelect(brand.name);
+    onSelect(brand.id);
     onClose();
   };
 
@@ -196,13 +200,13 @@ export default function BrandSelect({ selectedBrand, onSelect, onClose }: BrandS
         height: 20,
         borderRadius: 10,
         borderWidth: 2,
-        borderColor: selectedBrand === item.name ? '#3B82F6' : '#D1D5DB',
-        backgroundColor: selectedBrand === item.name ? '#3B82F6' : 'transparent',
+        borderColor: selectedBrand === item.id ? '#3B82F6' : '#D1D5DB',
+        backgroundColor: selectedBrand === item.id ? '#3B82F6' : 'transparent',
         marginRight: 16,
         alignItems: 'center',
         justifyContent: 'center',
       }}>
-        {selectedBrand === item.name && (
+        {selectedBrand === item.id && (
           <View style={{
             width: 8,
             height: 8,

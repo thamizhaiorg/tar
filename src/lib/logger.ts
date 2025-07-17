@@ -15,7 +15,7 @@ interface LogEntry {
 }
 
 class Logger {
-  private logLevel: LogLevel = __DEV__ ? LogLevel.DEBUG : LogLevel.INFO;
+  private logLevel: LogLevel = process.env.NODE_ENV === 'development' ? LogLevel.DEBUG : LogLevel.INFO;
   private logs: LogEntry[] = [];
   private maxLogs: number = 1000;
 
@@ -44,7 +44,7 @@ class Logger {
     }
 
     // Console output in development
-    if (__DEV__) {
+    if (process.env.NODE_ENV === 'development') {
       const prefix = context ? `[${context}]` : '';
       const logData = data ? [message, data] : [message];
       
@@ -178,7 +178,7 @@ export const trackError = (error: Error, context?: string, additionalData?: any)
   });
 
   // In production, you might want to send this to a crash reporting service
-  if (!__DEV__) {
+  if (process.env.NODE_ENV === 'production') {
     // Example: Crashlytics.recordError(error);
   }
 };

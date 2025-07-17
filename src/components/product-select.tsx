@@ -26,12 +26,24 @@ export default function ProductSelect({ collectionId, onClose }: ProductSelectPr
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
 
-  // Query all products and collection products
+  // Query all products with optimized schema
   const { isLoading, error, data } = db.useQuery(
     currentStore?.id ? {
       products: {
-        $: { where: { storeId: currentStore.id } },
-        collection: {}
+        $: { 
+          where: { 
+            storeId: currentStore.id,
+            status: { in: ['active', true] } // Filter for active products only
+          },
+          order: {
+            title: 'asc' // Use indexed field for ordering
+          }
+        },
+        collection: {},
+        brand: {}, // Include relationship data
+        category: {},
+        type: {},
+        vendor: {}
       }
     } : {}
   );

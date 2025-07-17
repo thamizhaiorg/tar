@@ -56,17 +56,22 @@ export default function SquarePOS({ onClose, onOrderCreated }: SquarePOSProps) {
   const [showPayment, setShowPayment] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Query products from InstantDB
+  // Query products from InstantDB with optimized schema
   const { data, isLoading } = db.useQuery({
     products: {
       item: {},
+      brand: {}, // Use new relationship links
+      category: {},
+      type: {},
+      vendor: {},
       $: {
         where: {
           storeId: currentStore?.id || '',
           pos: true,
+          status: { in: ['active', true] } // Filter for active products only
         },
         order: {
-          serverCreatedAt: 'desc'
+          createdAt: 'desc' // Use consistent field naming
         }
       }
     }

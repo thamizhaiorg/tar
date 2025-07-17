@@ -66,7 +66,7 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
   const insets = useSafeAreaInsets();
   const isEditing = !!product;
 
-  // Query product with collection relationship using useQuery
+  // Query product with relationships using optimized schema
   const { data: productWithCollection } = db.useQuery(
     product?.id ? {
       products: {
@@ -75,7 +75,11 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
             id: product.id
           }
         },
-        collection: {}
+        collection: {},
+        brand: {}, // Include all relationship data
+        category: {},
+        type: {},
+        vendor: {}
       }
     } : null
   );
@@ -89,6 +93,24 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
         $: { where: { storeId: currentStore.id } }
       },
       opvalues: {
+        $: { where: { storeId: currentStore.id } }
+      }
+    } : {}
+  );
+
+  // Query all relationship entities for display names
+  const { data: relationshipData } = db.useQuery(
+    currentStore?.id ? {
+      types: {
+        $: { where: { storeId: currentStore.id } }
+      },
+      categories: {
+        $: { where: { storeId: currentStore.id } }
+      },
+      vendors: {
+        $: { where: { storeId: currentStore.id } }
+      },
+      brands: {
         $: { where: { storeId: currentStore.id } }
       }
     } : {}
@@ -128,14 +150,14 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
     medias: product?.medias || [],
     blurb: product?.blurb || product?.excerpt || '',
     notes: product?.notes || '',
-    type: product?.type || '',
-    category: product?.category || '',
+    typeId: product?.typeId || '',
+    categoryId: product?.categoryId || '',
+    vendorId: product?.vendorId || '',
+    brandId: product?.brandId || '',
     unit: product?.unit || '',
     sku: product?.sku || '',
     price: product?.price?.toString() || '',
     saleprice: product?.saleprice?.toString() || '',
-    vendor: product?.vendor || '',
-    brand: product?.brand || '',
 
     options: product?.options || null,
     modifiers: product?.modifiers || null,
@@ -165,7 +187,7 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
     relproducts: product?.relproducts || null,
     sellproducts: product?.sellproducts || null,
     storeId: product?.storeId || currentStore?.id || '', // Use current store ID
-    status: product?.status ?? true, // true = Active, false = Draft
+    status: product?.status ?? 'active', // 'active', 'draft', or 'archived'
   });
 
   const [loading, setLoading] = useState(false);
@@ -272,6 +294,42 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
   const getFieldTypeDisplay = useCallback((type: string) => {
     return type ? type.replace(/_/g, ' ') : 'Value';
   }, []);
+
+  // Helper functions to get display names from relationship IDs
+  const getTypeName = useCallback((typeId: string) => {
+    if (!typeId) return null;
+    
+    // Try to get from relationship data first
+    if (relationshipData?.types) {
+      const type = relationshipData.types.find((t: any) => t.id === typeId);
+      if (type?.name) return type.name;
+    }
+    
+    // Fallback: try to get from product relationship data
+    if (productWithCollection?.products?.[0]?.type?.[0]?.name) {
+      return productWithCollection.products[0].type[0].name;
+    }
+    
+    return null;
+  }, [relationshipData?.types, productWithCollection?.products]);
+
+  const getCategoryName = useCallback((categoryId: string) => {
+    if (!categoryId || !relationshipData?.categories) return null;
+    const category = relationshipData.categories.find((c: any) => c.id === categoryId);
+    return category?.name || null;
+  }, [relationshipData?.categories]);
+
+  const getVendorName = useCallback((vendorId: string) => {
+    if (!vendorId || !relationshipData?.vendors) return null;
+    const vendor = relationshipData.vendors.find((v: any) => v.id === vendorId);
+    return vendor?.name || null;
+  }, [relationshipData?.vendors]);
+
+  const getBrandName = useCallback((brandId: string) => {
+    if (!brandId || !relationshipData?.brands) return null;
+    const brand = relationshipData.brands.find((b: any) => b.id === brandId);
+    return brand?.name || null;
+  }, [relationshipData?.brands]);
 
 
 
@@ -433,8 +491,8 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
                         newFormData.image ||
                         newFormData.blurb.trim() ||
                         newFormData.notes.trim() ||
-                        newFormData.type.trim() ||
-                        newFormData.category.trim() ||
+                        newFormData.typeId.trim() ||
+                        newFormData.categoryId.trim() ||
                         newFormData.price.trim() ||
                         newFormData.sku.trim() ||
                         (newFormData.tags && newFormData.tags.length > 0);
@@ -532,8 +590,8 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
   };
 
   // Function to handle status change with validation
-  const handleStatusChange = (newStatus: boolean) => {
-    if (newStatus && !formData.pos && !formData.website) {
+  const handleStatusChange = (newStatus: string) => {
+    if (newStatus === 'active' && !formData.pos && !formData.website) {
       showNotificationMessage('Enable POS or Website to set product as Active');
       return;
     }
@@ -740,6 +798,7 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
               onHand: 0,
               committed: 0,
               unavailable: 0,
+              createdAt: timestamp,
               updatedAt: timestamp
             })
           ]);
@@ -758,7 +817,7 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
       const setNames = optionSetNames.join(', ');
       Alert.alert('Success', `Generated ${combinations.length} item variants from option sets: ${setNames}`);
       setShowOptionSetSelector(false);
-      setSelectedOptionSets([]);
+      // Don't clear selectedOptionSets - keep them to show which sets have been used
 
     } catch (error) {
       console.error('Failed to generate items:', error);
@@ -871,6 +930,7 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
               onHand: 0,
               committed: 0,
               unavailable: 0,
+              createdAt: timestamp,
               updatedAt: timestamp
             })
           ]);
@@ -1023,7 +1083,8 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
             onHand: 0,
             committed: 0,
             unavailable: 0,
-            updatedAt: timestamp
+              createdAt: timestamp,
+              updatedAt: timestamp
           })
         ]);
 
@@ -1131,14 +1192,14 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
       if (formData.medias && formData.medias.length > 0) productData.medias = formData.medias;
       if (formData.blurb) productData.blurb = formData.blurb.trim();
       if (formData.notes && typeof formData.notes === 'string') productData.notes = formData.notes.trim();
-      if (formData.type) productData.type = formData.type.trim();
-      if (formData.category) productData.category = formData.category.trim();
+      if (formData.typeId) productData.typeId = formData.typeId.trim();
+      if (formData.categoryId) productData.categoryId = formData.categoryId.trim();
+      if (formData.vendorId) productData.vendorId = formData.vendorId.trim();
+      if (formData.brandId) productData.brandId = formData.brandId.trim();
       if (formData.unit) productData.unit = formData.unit.trim();
       if (formData.sku) productData.sku = formData.sku.trim();
       if (formData.price) productData.price = parseFloat(formData.price) || 0;
       if (formData.saleprice) productData.saleprice = parseFloat(formData.saleprice) || 0;
-      if (formData.vendor) productData.vendor = formData.vendor.trim();
-      if (formData.brand) productData.brand = formData.brand.trim();
       if (formData.options) productData.options = formData.options;
       if (formData.modifiers) productData.modifiers = formData.modifiers;
       // Handle metafields - build metafields object from selected fields and values
@@ -1413,7 +1474,7 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
                 onPress={() => setShowStatusDrawer(true)}
               >
                 <Text style={{ fontSize: 14, color: '#111827', fontWeight: '500' }}>
-                  {formData.status ? 'Active' : 'Draft'}
+                  {formData.status === 'active' ? 'Active' : formData.status === 'draft' ? 'Draft' : 'Archived'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -1683,7 +1744,7 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
               >
                 <Text style={{ fontSize: 16, fontWeight: '500', color: '#111827' }}>Type</Text>
                 <Text style={{ fontSize: 14, color: '#6B7280', marginTop: 4 }}>
-                  {formData.type || 'Select type'}
+                  {formData.typeId ? (getTypeName(formData.typeId) || 'Type selected') : 'Select type'}
                 </Text>
               </TouchableOpacity>
 
@@ -1699,7 +1760,7 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
               >
                 <Text style={{ fontSize: 16, fontWeight: '500', color: '#111827' }}>Category</Text>
                 <Text style={{ fontSize: 14, color: '#6B7280', marginTop: 4 }}>
-                  {formData.category || 'Select category'}
+                  {formData.categoryId ? (getCategoryName(formData.categoryId) || 'Category selected') : 'Select category'}
                 </Text>
               </TouchableOpacity>
 
@@ -1715,7 +1776,7 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
               >
                 <Text style={{ fontSize: 16, fontWeight: '500', color: '#111827' }}>Vendor</Text>
                 <Text style={{ fontSize: 14, color: '#6B7280', marginTop: 4 }}>
-                  {formData.vendor || 'Select vendor'}
+                  {formData.vendorId ? (getVendorName(formData.vendorId) || 'Vendor selected') : 'Select vendor'}
                 </Text>
               </TouchableOpacity>
 
@@ -1731,7 +1792,7 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
               >
                 <Text style={{ fontSize: 16, fontWeight: '500', color: '#111827' }}>Brand</Text>
                 <Text style={{ fontSize: 14, color: '#6B7280', marginTop: 4 }}>
-                  {formData.brand || 'Select brand'}
+                  {formData.brandId ? (getBrandName(formData.brandId) || 'Brand selected') : 'Select brand'}
                 </Text>
               </TouchableOpacity>
 
@@ -1917,9 +1978,9 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
         onRequestClose={() => setShowTypeSelect(false)}
       >
         <TypeSelect
-          selectedType={formData.type}
-          onSelect={(type) => {
-            updateField('type', type);
+          selectedType={formData.typeId}
+          onSelect={(typeId) => {
+            updateField('typeId', typeId);
             setShowTypeSelect(false);
           }}
           onClose={() => setShowTypeSelect(false)}
@@ -1934,9 +1995,9 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
         onRequestClose={() => setShowCategorySelect(false)}
       >
         <CategorySelect
-          selectedCategory={formData.category}
-          onSelect={(category) => {
-            updateField('category', category);
+          selectedCategory={formData.categoryId}
+          onSelect={(categoryId) => {
+            updateField('categoryId', categoryId);
             setShowCategorySelect(false);
           }}
           onClose={() => setShowCategorySelect(false)}
@@ -1951,9 +2012,9 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
         onRequestClose={() => setShowVendorSelect(false)}
       >
         <VendorSelect
-          selectedVendor={formData.vendor}
-          onSelect={(vendor) => {
-            updateField('vendor', vendor);
+          selectedVendor={formData.vendorId}
+          onSelect={(vendorId) => {
+            updateField('vendorId', vendorId);
             setShowVendorSelect(false);
           }}
           onClose={() => setShowVendorSelect(false)}
@@ -1968,9 +2029,9 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
         onRequestClose={() => setShowBrandSelect(false)}
       >
         <BrandSelect
-          selectedBrand={formData.brand}
-          onSelect={(brand) => {
-            updateField('brand', brand);
+          selectedBrand={formData.brandId}
+          onSelect={(brandId) => {
+            updateField('brandId', brandId);
             setShowBrandSelect(false);
           }}
           onClose={() => setShowBrandSelect(false)}
@@ -2090,7 +2151,7 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
           }}>
             <TouchableOpacity
               style={{
-                backgroundColor: formData.status ? '#F3F4F6' : '#fff',
+                backgroundColor: formData.status === 'active' ? '#F3F4F6' : '#fff',
                 borderWidth: 1,
                 borderColor: '#E5E7EB',
                 borderRadius: 8,
@@ -2098,7 +2159,7 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
                 paddingHorizontal: 16,
                 marginBottom: 12,
               }}
-              onPress={() => handleStatusChange(true)}
+              onPress={() => handleStatusChange('active')}
             >
               <Text style={{ fontSize: 16, fontWeight: '500', color: '#111827' }}>Active</Text>
               <Text style={{ fontSize: 14, color: '#6B7280', marginTop: 4 }}>
@@ -2108,18 +2169,36 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
 
             <TouchableOpacity
               style={{
-                backgroundColor: !formData.status ? '#F3F4F6' : '#fff',
+                backgroundColor: formData.status === 'draft' ? '#F3F4F6' : '#fff',
+                borderWidth: 1,
+                borderColor: '#E5E7EB',
+                borderRadius: 8,
+                paddingVertical: 16,
+                paddingHorizontal: 16,
+                marginBottom: 12,
+              }}
+              onPress={() => handleStatusChange('draft')}
+            >
+              <Text style={{ fontSize: 16, fontWeight: '500', color: '#111827' }}>Draft</Text>
+              <Text style={{ fontSize: 14, color: '#6B7280', marginTop: 4 }}>
+                Product is hidden and not available for sale
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={{
+                backgroundColor: formData.status === 'archived' ? '#F3F4F6' : '#fff',
                 borderWidth: 1,
                 borderColor: '#E5E7EB',
                 borderRadius: 8,
                 paddingVertical: 16,
                 paddingHorizontal: 16,
               }}
-              onPress={() => handleStatusChange(false)}
+              onPress={() => handleStatusChange('archived')}
             >
-              <Text style={{ fontSize: 16, fontWeight: '500', color: '#111827' }}>Draft</Text>
+              <Text style={{ fontSize: 16, fontWeight: '500', color: '#111827' }}>Archived</Text>
               <Text style={{ fontSize: 14, color: '#6B7280', marginTop: 4 }}>
-                Product is hidden and not available for sale
+                Product is archived and not available
               </Text>
             </TouchableOpacity>
           </View>
@@ -2380,6 +2459,9 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
                           {optionSet.values.length} {optionSet.values.length === 1 ? 'variant' : 'variants'}
                         </Text>
                       </View>
+                      {selectedOptionSets.includes(optionSet.id) && (
+                        <MaterialIcons name="check-circle" size={24} color="#10B981" />
+                      )}
                     </View>
                   </TouchableOpacity>
                 );
@@ -2865,3 +2947,5 @@ export default function ProductFormScreen({ product, onClose, onSave, onNavigate
     </View>
   );
 }
+
+

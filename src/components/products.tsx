@@ -129,15 +129,19 @@ export default function ProductsScreen({ isGridView = false, onProductFormOpen, 
   // Removed custom BackHandler logic to allow default navigation behavior
 
   // Query products with their items filtered by current store
+  // Note: Relationship queries removed temporarily until relationships are properly established
   const { isLoading, error, data } = db.useQuery(
     currentStore?.id ? {
       products: {
         $: {
           where: {
             storeId: currentStore.id
+          },
+          order: {
+            createdAt: 'desc' // Use consistent field naming
           }
         },
-        item: {}
+        item: {} // Keep item relationship as it's working
       }
     } : null // Don't query if no store selected
   );
@@ -158,27 +162,26 @@ export default function ProductsScreen({ isGridView = false, onProductFormOpen, 
 
       return products.filter((product: any) => {
         const title = product.title || '';
-        const category = product.category || '';
-        const brand = product.brand || '';
         const tags = product.tags || [];
 
-        // Search filter - handle tags as array
+        // Search filter - simplified to work with current schema
         const tagsString = Array.isArray(tags) ? tags.join(' ') : (typeof tags === 'string' ? tags : '');
         const matchesSearch = !searchTerm || (
           title.toLowerCase().includes(searchTerm) ||
-          category.toLowerCase().includes(searchTerm) ||
-          brand.toLowerCase().includes(searchTerm) ||
-          tagsString.toLowerCase().includes(searchTerm)
+          tagsString.toLowerCase().includes(searchTerm) ||
+          (product.sku || '').toLowerCase().includes(searchTerm) ||
+          (product.barcode || '').toLowerCase().includes(searchTerm) ||
+          (product.description || '').toLowerCase().includes(searchTerm)
         );
 
-        // Status filter - Simple and intuitive
+        // Status filter - Use new status field values
         let matchesStatus = true;
         if (activeFilter === 'Active') {
-          // Active: status is true (or undefined/null which defaults to active)
-          matchesStatus = product.status !== false;
+          // Active: status is 'active' or not 'draft'
+          matchesStatus = product.status === 'active' || (product.status !== 'draft' && product.status !== false);
         } else if (activeFilter === 'Draft') {
-          // Draft: status is explicitly false
-          matchesStatus = product.status === false;
+          // Draft: status is 'draft' or explicitly false
+          matchesStatus = product.status === 'draft' || product.status === false;
         }
         // 'All' filter shows everything (matchesStatus remains true)
 

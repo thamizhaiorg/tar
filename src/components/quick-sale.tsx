@@ -63,17 +63,22 @@ export default function QuickSale({ onClose, onOrderCreated }: QuickSaleProps) {
     setShowProductSelection(false);
   };
 
-  // Query products from InstantDB
+  // Query products from InstantDB with optimized schema
   const { data, isLoading } = db.useQuery({
     products: {
       item: {},
+      brand: {}, // Use new relationship links
+      category: {},
+      type: {},
+      vendor: {},
       $: {
         where: {
           storeId: currentStore?.id || '',
           pos: true,
+          status: { in: ['active', true] } // Filter for active products only
         },
         order: {
-          serverCreatedAt: 'desc'
+          createdAt: 'desc' // Use consistent field naming
         }
       }
     }

@@ -40,13 +40,16 @@ export default function TypeSelect({ selectedType, onSelect, onClose }: TypeSele
     return () => backHandler.remove();
   }, [onClose]);
 
-  // Query types from database using useQuery hook
+  // Query types from database with optimized schema
   const { isLoading, error, data } = db.useQuery(
     currentStore?.id ? {
       types: {
         $: {
           where: {
             storeId: currentStore.id
+          },
+          order: {
+            name: 'asc' // Use indexed field for ordering
           }
         }
       }
@@ -101,7 +104,7 @@ export default function TypeSelect({ selectedType, onSelect, onClose }: TypeSele
     );
 
     if (existingType) {
-      onSelect(existingType.name);
+      onSelect(existingType.id);
       onClose();
       return;
     }
@@ -112,8 +115,9 @@ export default function TypeSelect({ selectedType, onSelect, onClose }: TypeSele
         storeId: currentStore.id,
       };
 
-      await db.transact(db.tx.types[id()].update(newType));
-      onSelect(searchQuery.trim());
+      const typeId = id();
+      await db.transact(db.tx.types[typeId].update(newType));
+      onSelect(typeId);
       onClose();
     } catch (error) {
       console.error('Error adding type:', error);
@@ -122,7 +126,7 @@ export default function TypeSelect({ selectedType, onSelect, onClose }: TypeSele
   };
 
   const handleSelectType = (type: TypeItem) => {
-    onSelect(type.name);
+    onSelect(type.id); // Return ID instead of name
     onClose();
   };
 
@@ -199,13 +203,13 @@ export default function TypeSelect({ selectedType, onSelect, onClose }: TypeSele
         height: 20,
         borderRadius: 10,
         borderWidth: 2,
-        borderColor: selectedType === item.name ? '#3B82F6' : '#D1D5DB',
-        backgroundColor: selectedType === item.name ? '#3B82F6' : 'transparent',
+        borderColor: selectedType === item.id ? '#3B82F6' : '#D1D5DB',
+        backgroundColor: selectedType === item.id ? '#3B82F6' : 'transparent',
         marginRight: 16,
         alignItems: 'center',
         justifyContent: 'center',
       }}>
-        {selectedType === item.name && (
+        {selectedType === item.id && (
           <View style={{
             width: 8,
             height: 8,
@@ -229,21 +233,26 @@ export default function TypeSelect({ selectedType, onSelect, onClose }: TypeSele
     <View style={{
       flex: 1,
       backgroundColor: '#fff',
-      paddingTop: insets.top,
     }}>
       {/* Header */}
       <View style={{
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingVertical: 16,
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        paddingTop: insets.top + 12,
         backgroundColor: '#fff',
         borderBottomWidth: 1,
         borderBottomColor: '#E5E7EB',
       }}>
-        <Text style={{ fontSize: 17, fontWeight: '600', color: '#111827' }}>
+        <TouchableOpacity onPress={onClose}>
+          <Ionicons name="close" size={24} color="#374151" />
+        </TouchableOpacity>
+        <Text style={{ fontSize: 18, fontWeight: '600', color: '#111827' }}>
           Type
         </Text>
+        <View style={{ width: 24 }} />
       </View>
 
       {/* Search Bar */}

@@ -23,7 +23,7 @@ export default function CollectionFormScreen({ collection, onClose, onSave }: Co
   const { currentStore } = useStore();
   const isEditing = !!collection;
 
-  // Query collection with products relationship
+  // Query collection with products relationship using optimized schema
   const { data: collectionWithProducts } = db.useQuery(
     collection?.id ? {
       collections: {
@@ -32,7 +32,12 @@ export default function CollectionFormScreen({ collection, onClose, onSave }: Co
             id: collection.id
           }
         },
-        products: {}
+        products: {
+          brand: {}, // Include relationship data
+          category: {},
+          type: {},
+          vendor: {}
+        }
       }
     } : null
   );

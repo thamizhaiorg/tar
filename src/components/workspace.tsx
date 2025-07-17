@@ -29,13 +29,16 @@ export default function Workspace({ onNavigate, onClose }: WorkspaceProps) {
 
 
 
-  // Fetch sales data
+  // Fetch sales data with optimized schema
   const { data: ordersData } = db.useQuery({
     orders: {
       $: {
         where: {
           storeId: currentStore?.id || '',
         },
+        order: {
+          createdAt: 'desc' // Use consistent field naming and add ordering
+        }
       },
     },
   });

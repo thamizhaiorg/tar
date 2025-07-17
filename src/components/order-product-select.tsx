@@ -54,17 +54,22 @@ export default function OrderProductSelect({ onProductsSelect, onClose }: OrderP
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
   const [selectedVariants, setSelectedVariants] = useState<Map<string, string>>(new Map());
 
-  // Query products from InstantDB
+  // Query products from InstantDB with optimized schema
   const { data, isLoading, error } = db.useQuery({
     products: {
       item: {},
+      brand: {}, // Include relationship data
+      category: {},
+      type: {},
+      vendor: {},
       $: {
         where: {
           storeId: currentStore?.id || '',
           pos: true, // Only show POS-enabled products
+          status: { in: ['active', true] } // Filter for active products only
         },
         order: {
-          serverCreatedAt: 'desc'
+          createdAt: 'desc' // Use consistent field naming
         }
       }
     }

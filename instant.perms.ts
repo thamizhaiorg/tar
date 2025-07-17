@@ -3,71 +3,63 @@
 import type { InstantRules } from "@instantdb/react-native";
 
 const rules = {
-  // Allow authenticated users to manage their own peoplea profile
-  peoplea: {
-    allow: {
-      view: "isOwner",
-      create: "isOwner",
-      update: "isOwner",
-      delete: "isOwner",
-    },
-    bind: ["isOwner", "auth.id != null && auth.id == data.userId"],
-  },
-
-  // Allow authenticated users to manage stores they own
-  store: {
-    allow: {
-      view: "isOwner || true", // Allow viewing all stores for now
-      create: "auth.id != null",
-      update: "isOwner",
-      delete: "isOwner",
-    },
-    bind: ["isOwner", "auth.id != null && auth.id == data.peopleaId"],
-  },
-
-  // Allow authenticated users to view and manage data in their stores
-  products: {
-    allow: {
-      view: "auth.id != null",
-      create: "auth.id != null",
-      update: "auth.id != null",
-      delete: "auth.id != null",
-    },
-  },
-
   items: {
     allow: {
       view: "auth.id != null",
       create: "auth.id != null",
-      update: "auth.id != null",
       delete: "auth.id != null",
+      update: "auth.id != null",
     },
   },
-
-  collections: {
+  store: {
+    bind: ["isOwner", "auth.id != null && auth.id == data.peopleaId"],
     allow: {
-      view: "auth.id != null",
+      view: "isOwner || true",
       create: "auth.id != null",
-      update: "auth.id != null",
-      delete: "auth.id != null",
+      delete: "isOwner",
+      update: "isOwner",
     },
   },
-
   orders: {
     allow: {
       view: "auth.id != null",
       create: "auth.id != null",
-      update: "auth.id != null",
       delete: "auth.id != null",
+      update: "auth.id != null",
     },
   },
-
+  peoplea: {
+    bind: ["isOwner", "auth.id != null && auth.id == data.userId"],
+    allow: {
+      view: "isOwner",
+      create: "isOwner",
+      delete: "isOwner",
+      update: "isOwner",
+    },
+  },
+  products: {
+    allow: {
+      view: "auth.id != null",
+      create: "auth.id != null",
+      delete: "auth.id != null",
+      update: "auth.id != null",
+    },
+  },
   customers: {
     allow: {
       view: "auth.id != null",
       create: "auth.id != null",
-      update: "auth.id != null",
       delete: "auth.id != null",
+      update: "auth.id != null",
+    },
+  },
+  __esModule: "true",
+  collections: {
+    allow: {
+      view: "auth.id != null",
+      create: "auth.id != null",
+      delete: "auth.id != null",
+      update: "auth.id != null",
     },
   },
 } satisfies InstantRules;

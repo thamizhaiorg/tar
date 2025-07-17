@@ -42,13 +42,16 @@ export default function TagSelect({ selectedTags = [], onSelect, onClose }: TagS
     return () => backHandler.remove();
   }, [onClose]);
 
-  // Query tags from database
+  // Query tags from database with optimized schema
   const { isLoading, error, data } = db.useQuery(
     currentStore?.id ? {
       tags: {
         $: {
           where: {
             storeId: currentStore.id
+          },
+          order: {
+            name: 'asc' // Use indexed field for ordering
           }
         }
       }

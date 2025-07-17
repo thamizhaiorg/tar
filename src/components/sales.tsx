@@ -18,8 +18,12 @@ interface Order {
   fulfillmentStatus: string;
   paymentStatus: string;
   total: number;
-  createdat: Date;
+  createdAt: Date; // Use consistent field naming
   customer?: Array<{
+    id: string;
+    name: string;
+  }>;
+  location?: Array<{
     id: string;
     name: string;
   }>;
@@ -49,17 +53,18 @@ export default function SalesScreen({}: SalesScreenProps) {
     return () => backHandler.remove();
   }, [currentView]);
 
-  // Query orders from InstantDB
+  // Query orders from InstantDB with optimized schema
   const { data, isLoading } = db.useQuery({
     orders: {
       customer: {},
       orderitems: {},
+      location: {}, // Use new location relationship
       $: {
         where: {
           storeId: currentStore?.id || '',
         },
         order: {
-          serverCreatedAt: 'desc'
+          createdAt: 'desc' // Use consistent field naming
         }
       }
     }
@@ -90,7 +95,7 @@ export default function SalesScreen({}: SalesScreenProps) {
     today.setHours(0, 0, 0, 0);
 
     const todayOrders = orders.filter((order: Order) => {
-      const orderDate = new Date(order.createdat);
+      const orderDate = new Date(order.createdAt);
       orderDate.setHours(0, 0, 0, 0);
       return orderDate.getTime() === today.getTime();
     });
@@ -115,7 +120,7 @@ export default function SalesScreen({}: SalesScreenProps) {
       title: order.customerName || order.customer?.[0]?.name || `Order ${order.orderNumber}`,
       amount: order.total,
       type: 'credit' as const,
-      date: formatOrderDate(order.createdat),
+      date: formatOrderDate(order.createdAt),
       orderNumber: order.orderNumber,
       status: order.status
     }));

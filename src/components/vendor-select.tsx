@@ -39,13 +39,16 @@ export default function VendorSelect({ selectedVendor, onSelect, onClose }: Vend
     return () => backHandler.remove();
   }, [onClose]);
 
-  // Query vendors from database
+  // Query vendors from database with optimized schema
   const { isLoading, error, data } = db.useQuery(
     currentStore?.id ? {
       vendors: {
         $: {
           where: {
             storeId: currentStore.id
+          },
+          order: {
+            name: 'asc' // Use indexed field for ordering
           }
         }
       }
@@ -98,7 +101,7 @@ export default function VendorSelect({ selectedVendor, onSelect, onClose }: Vend
     );
 
     if (existingVendor) {
-      onSelect(existingVendor.name);
+      onSelect(existingVendor.id);
       onClose();
       return;
     }
@@ -109,8 +112,9 @@ export default function VendorSelect({ selectedVendor, onSelect, onClose }: Vend
         storeId: currentStore.id,
       };
 
-      await db.transact(db.tx.vendors[id()].update(newVendor));
-      onSelect(searchQuery.trim());
+      const vendorId = id();
+      await db.transact(db.tx.vendors[vendorId].update(newVendor));
+      onSelect(vendorId);
       onClose();
     } catch (error) {
       console.error('Error adding vendor:', error);
@@ -119,7 +123,7 @@ export default function VendorSelect({ selectedVendor, onSelect, onClose }: Vend
   };
 
   const handleSelectVendor = (vendor: VendorItem) => {
-    onSelect(vendor.name);
+    onSelect(vendor.id);
     onClose();
   };
 
@@ -196,13 +200,13 @@ export default function VendorSelect({ selectedVendor, onSelect, onClose }: Vend
         height: 20,
         borderRadius: 10,
         borderWidth: 2,
-        borderColor: selectedVendor === item.name ? '#3B82F6' : '#D1D5DB',
-        backgroundColor: selectedVendor === item.name ? '#3B82F6' : 'transparent',
+        borderColor: selectedVendor === item.id ? '#3B82F6' : '#D1D5DB',
+        backgroundColor: selectedVendor === item.id ? '#3B82F6' : 'transparent',
         marginRight: 16,
         alignItems: 'center',
         justifyContent: 'center',
       }}>
-        {selectedVendor === item.name && (
+        {selectedVendor === item.id && (
           <View style={{
             width: 8,
             height: 8,

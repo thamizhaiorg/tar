@@ -29,10 +29,20 @@ export default function CollectionsScreen({ isGridView = false, onOpenForm, onCl
     return () => backHandler.remove();
   }, [onClose]);
 
-  // Query collections with their products
+  // Query collections with their products using optimized schema
   const { isLoading, error, data } = db.useQuery({
     collections: {
-      products: {}
+      products: {
+        brand: {}, // Include relationship data
+        category: {},
+        type: {},
+        vendor: {}
+      },
+      $: {
+        order: {
+          name: 'asc' // Use indexed field for ordering
+        }
+      }
     }
   });
 

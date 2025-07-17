@@ -40,13 +40,16 @@ export default function CategorySelect({ selectedCategory, onSelect, onClose }: 
     return () => backHandler.remove();
   }, [onClose]);
 
-  // Query categories from database
+  // Query categories from database with optimized schema
   const { isLoading, error, data } = db.useQuery(
     currentStore?.id ? {
       categories: {
         $: {
           where: {
             storeId: currentStore.id
+          },
+          order: {
+            name: 'asc' // Use indexed field for ordering
           }
         }
       }
@@ -99,7 +102,7 @@ export default function CategorySelect({ selectedCategory, onSelect, onClose }: 
     );
 
     if (existingCategory) {
-      onSelect(existingCategory.name);
+      onSelect(existingCategory.id);
       onClose();
       return;
     }
@@ -110,8 +113,9 @@ export default function CategorySelect({ selectedCategory, onSelect, onClose }: 
         storeId: currentStore.id,
       };
 
-      await db.transact(db.tx.categories[id()].update(newCategory));
-      onSelect(searchQuery.trim());
+      const categoryId = id();
+      await db.transact(db.tx.categories[categoryId].update(newCategory));
+      onSelect(categoryId);
       onClose();
     } catch (error) {
       console.error('Error adding category:', error);
@@ -120,7 +124,7 @@ export default function CategorySelect({ selectedCategory, onSelect, onClose }: 
   };
 
   const handleSelectCategory = (category: CategoryItem) => {
-    onSelect(category.name);
+    onSelect(category.id);
     onClose();
   };
 
@@ -197,13 +201,13 @@ export default function CategorySelect({ selectedCategory, onSelect, onClose }: 
         height: 20,
         borderRadius: 10,
         borderWidth: 2,
-        borderColor: selectedCategory === item.name ? '#3B82F6' : '#D1D5DB',
-        backgroundColor: selectedCategory === item.name ? '#3B82F6' : 'transparent',
+        borderColor: selectedCategory === item.id ? '#3B82F6' : '#D1D5DB',
+        backgroundColor: selectedCategory === item.id ? '#3B82F6' : 'transparent',
         marginRight: 16,
         alignItems: 'center',
         justifyContent: 'center',
       }}>
-        {selectedCategory === item.name && (
+        {selectedCategory === item.id && (
           <View style={{
             width: 8,
             height: 8,

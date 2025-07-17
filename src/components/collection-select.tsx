@@ -45,13 +45,16 @@ export default function CollectionSelect({ selectedCollection, onSelect, onClose
     return () => backHandler.remove();
   }, [onClose]);
 
-  // Query collections from database
+  // Query collections from database with optimized schema
   const { isLoading, error, data } = db.useQuery(
     currentStore?.id ? {
       collections: {
         $: {
           where: {
             storeId: currentStore.id
+          },
+          order: {
+            name: 'asc' // Use indexed field for ordering
           }
         }
       }

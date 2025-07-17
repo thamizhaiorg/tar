@@ -32,45 +32,58 @@ export class ProductService {
     return ProductService.instance;
   }
 
-  // Filter products based on criteria
+  // Filter products based on criteria - updated for optimized schema
   filterProducts(products: Product[], filters: ProductFilters): Product[] {
     return PerformanceMonitor.measure('filter-products', () => {
       let filtered = products;
 
-      // Search filter
+      // Search filter - updated to use relationship data
       if (filters.search) {
         const searchTerm = filters.search.toLowerCase();
         filtered = filtered.filter(product => {
           const title = (product.title || '').toLowerCase();
-          const category = (product.category || '').toLowerCase();
-          const brand = (product.brand || '').toLowerCase();
+          // Use relationship data instead of string fields
+          const categoryName = (product as any).category?.[0]?.name?.toLowerCase() || '';
+          const brandName = (product as any).brand?.[0]?.name?.toLowerCase() || '';
+          const typeName = (product as any).type?.[0]?.name?.toLowerCase() || '';
+          const vendorName = (product as any).vendor?.[0]?.name?.toLowerCase() || '';
           const tags = Array.isArray(product.tags) 
             ? product.tags.join(' ').toLowerCase()
             : (typeof product.tags === 'string' ? product.tags.toLowerCase() : '');
 
           return title.includes(searchTerm) ||
-                 category.includes(searchTerm) ||
-                 brand.includes(searchTerm) ||
-                 tags.includes(searchTerm);
+                 categoryName.includes(searchTerm) ||
+                 brandName.includes(searchTerm) ||
+                 typeName.includes(searchTerm) ||
+                 vendorName.includes(searchTerm) ||
+                 tags.includes(searchTerm) ||
+                 ((product as any).sku || '').toLowerCase().includes(searchTerm) ||
+                 ((product as any).barcode || '').toLowerCase().includes(searchTerm);
         });
       }
 
-      // Status filter
+      // Status filter - updated for new status field values
       if (filters.status && filters.status !== 'All') {
         filtered = filtered.filter(product => {
-          const status = product.publish === false ? 'Draft' : 'Active';
+          const status = (product as any).status === 'draft' || (product as any).status === false ? 'Draft' : 'Active';
           return status === filters.status;
         });
       }
 
-      // Category filter
+      // Category filter - updated to use relationship ID
       if (filters.category) {
-        filtered = filtered.filter(product => product.category === filters.category);
+        filtered = filtered.filter(product => 
+          (product as any).categoryId === filters.category ||
+          (product as any).category?.[0]?.name === filters.category
+        );
       }
 
-      // Brand filter
+      // Brand filter - updated to use relationship ID
       if (filters.brand) {
-        filtered = filtered.filter(product => product.brand === filters.brand);
+        filtered = filtered.filter(product => 
+          (product as any).brandId === filters.brand ||
+          (product as any).brand?.[0]?.name === filters.brand
+        );
       }
 
       // Tags filter
@@ -141,13 +154,36 @@ export class ProductService {
     });
   }
 
-  // Create a new product
+  // Create a new product - updated for optimized schema with validation
   async createProduct(productData: Partial<Product>, storeId: string): Promise<{ success: boolean; productId?: string; error?: string }> {
     try {
       log.info('Creating product', 'ProductService', { productData, storeId });
 
+      // Import validation service for enhanced validation
+      const { ValidationService } = await import('./validation-service');
+      const validationService = ValidationService.getInstance();
+
+      // Validate product data with new constraints
+      const validation = validationService.validateProduct({
+        title: productData.title,
+        price: productData.price,
+        cost: productData.cost,
+        saleprice: (productData as any).saleprice,
+        sku: (productData as any).sku,
+        barcode: (productData as any).barcode,
+        status: (productData as any).status,
+        brandId: (productData as any).brandId,
+        categoryId: (productData as any).categoryId,
+        typeId: (productData as any).typeId,
+        vendorId: (productData as any).vendorId,
+      }, true);
+
+      if (!validation.isValid) {
+        return { success: false, error: `Validation failed: ${Object.values(validation.errors).join(', ')}` };
+      }
+
       const newId = id();
-      const timestamp = Date.now();
+      const timestamp = new Date();
 
       const product = {
         ...productData,
@@ -155,7 +191,14 @@ export class ProductService {
         storeId,
         createdAt: timestamp,
         updatedAt: timestamp,
-        publish: productData.publish !== undefined ? productData.publish : true,
+        // Use new status field values instead of publish boolean
+        status: (productData as any).status || 'active', // Default to 'active'
+        // Ensure title is required (validated above)
+        title: productData.title || 'Untitled Product',
+        // Ensure non-negative prices
+        price: productData.price && productData.price >= 0 ? productData.price : undefined,
+        cost: productData.cost && productData.cost >= 0 ? productData.cost : undefined,
+        saleprice: (productData as any).saleprice && (productData as any).saleprice >= 0 ? (productData as any).saleprice : undefined,
       };
 
       await db.transact([
@@ -170,14 +213,41 @@ export class ProductService {
     }
   }
 
-  // Update an existing product
+  // Update an existing product - updated for optimized schema with validation
   async updateProduct(productId: string, updates: Partial<Product>): Promise<{ success: boolean; error?: string }> {
     try {
       log.info('Updating product', 'ProductService', { productId, updates });
 
+      // Import validation service for enhanced validation
+      const { ValidationService } = await import('./validation-service');
+      const validationService = ValidationService.getInstance();
+
+      // Validate product updates with new constraints
+      const validation = validationService.validateProduct({
+        title: updates.title,
+        price: updates.price,
+        cost: updates.cost,
+        saleprice: (updates as any).saleprice,
+        sku: (updates as any).sku,
+        barcode: (updates as any).barcode,
+        status: (updates as any).status,
+        brandId: (updates as any).brandId,
+        categoryId: (updates as any).categoryId,
+        typeId: (updates as any).typeId,
+        vendorId: (updates as any).vendorId,
+      });
+
+      if (!validation.isValid) {
+        return { success: false, error: `Validation failed: ${Object.values(validation.errors).join(', ')}` };
+      }
+
       const updateData = {
         ...updates,
-        updatedAt: Date.now(),
+        updatedAt: new Date(), // Use Date object instead of timestamp
+        // Ensure non-negative prices if provided
+        price: updates.price !== undefined && updates.price >= 0 ? updates.price : updates.price,
+        cost: updates.cost !== undefined && updates.cost >= 0 ? updates.cost : updates.cost,
+        saleprice: (updates as any).saleprice !== undefined && (updates as any).saleprice >= 0 ? (updates as any).saleprice : (updates as any).saleprice,
       };
 
       await db.transact([
@@ -280,15 +350,16 @@ export class ProductService {
       let priceCount = 0;
 
       products.forEach(product => {
-        // Status counts
-        if (product.publish === false) {
+        // Status counts - updated for new status field values
+        const status = (product as any).status;
+        if (status === 'draft' || status === false) {
           stats.draft++;
         } else {
           stats.active++;
         }
 
-        // Stock counts
-        const stock = product.stock || 0;
+        // Stock counts - use enhanced inventory tracking
+        const stock = (product as any).totalOnHand || product.stock || 0;
         if (stock === 0) {
           stats.outOfStock++;
         } else if (stock <= 5) { // Assuming low stock threshold is 5

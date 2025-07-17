@@ -16,17 +16,21 @@ interface Order {
   fulfillmentStatus: string;
   paymentStatus: string;
   total: number;
-  createdat: Date;
+  createdAt: Date; // Use consistent field naming
   orderitems?: Array<{
     id: string;
     title: string;
-    qty: number;
+    quantity: number; // Use consistent field naming
     price: number;
   }>;
   customer?: Array<{
     id: string;
     name: string;
     email?: string;
+  }>;
+  location?: Array<{
+    id: string;
+    name: string;
   }>;
 }
 
@@ -61,17 +65,18 @@ export default function OrdersScreen({ onCreateOrder, onOrderSelect, onClose }: 
     return () => backHandler.remove();
   }, [onClose]);
 
-  // Query orders from InstantDB
+  // Query orders from InstantDB with optimized schema
   const { data, isLoading, error } = db.useQuery({
     orders: {
       orderitems: {},
       customer: {},
+      location: {}, // Use new location relationship
       $: {
         where: {
           storeId: currentStore?.id || '',
         },
         order: {
-          serverCreatedAt: 'desc'
+          createdAt: 'desc' // Use consistent field naming
         }
       }
     }
@@ -176,7 +181,7 @@ export default function OrdersScreen({ onCreateOrder, onOrderSelect, onClose }: 
           </View>
 
           <Text className="text-sm text-gray-500 mb-4">
-            {itemCount} item{itemCount !== 1 ? 's' : ''} • {formatDate(order.createdat)}
+            {itemCount} item{itemCount !== 1 ? 's' : ''} • {formatDate(order.createdAt)}
           </Text>
 
           <View className="flex-row items-center space-x-3">

@@ -54,17 +54,22 @@ export default function QuickOrderPOS({ onClose, onOrderComplete }: QuickOrderPO
   const [showPayment, setShowPayment] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Query products
+  // Query products with optimized schema
   const { data, isLoading } = db.useQuery({
     products: {
       item: {},
+      brand: {}, // Use new relationship links
+      category: {},
+      type: {},
+      vendor: {},
       $: {
         where: {
           storeId: currentStore?.id || '',
           pos: true,
+          status: { in: ['active', true] } // Filter for active products only
         },
         order: {
-          serverCreatedAt: 'desc'
+          createdAt: 'desc' // Use consistent field naming
         }
       }
     }

@@ -40,7 +40,7 @@ export default function CustomerSelect({ selectedCustomer, onCustomerSelect, onC
     notes: ''
   });
 
-  // Query customers from InstantDB
+  // Query customers from InstantDB with optimized schema
   const { data, isLoading, error } = db.useQuery({
     customers: {
       $: {
@@ -48,7 +48,7 @@ export default function CustomerSelect({ selectedCustomer, onCustomerSelect, onC
           storeId: currentStore?.id || '',
         },
         order: {
-          serverCreatedAt: 'desc'
+          createdAt: 'desc' // Use consistent field naming
         }
       }
     }

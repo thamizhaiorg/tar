@@ -76,13 +76,19 @@ jest.mock('../lib/instant', () => ({
       error: null,
     })),
     transact: jest.fn(),
-    tx: {
-      products: {},
-      collections: {},
-      items: {},
-      files: {},
-      stores: {},
-    },
+    tx: new Proxy({}, {
+      get: (target, entityName) => {
+        return new Proxy({}, {
+          get: (target, id) => {
+            return {
+              update: jest.fn(),
+              merge: jest.fn(),
+              delete: jest.fn(),
+            };
+          }
+        });
+      }
+    }),
     auth: {
       signOut: jest.fn(),
     },

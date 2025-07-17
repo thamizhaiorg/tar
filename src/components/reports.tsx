@@ -30,20 +30,30 @@ export default function ReportsScreen({ onOpenMenu, onClose }: ReportsScreenProp
     return () => backHandler.remove();
   }, [onClose]);
 
-  // Query products for metrics filtered by current store
+  // Query products for metrics with optimized schema
   const { data } = db.useQuery(
     currentStore?.id ? {
       products: {
         $: {
           where: {
             storeId: currentStore.id
+          },
+          order: {
+            createdAt: 'desc' // Use consistent field naming
           }
-        }
+        },
+        brand: {}, // Include relationship data for better reporting
+        category: {},
+        type: {},
+        vendor: {}
       },
       collections: {
         $: {
           where: {
             storeId: currentStore.id
+          },
+          order: {
+            name: 'asc' // Use indexed field for ordering
           }
         }
       }
