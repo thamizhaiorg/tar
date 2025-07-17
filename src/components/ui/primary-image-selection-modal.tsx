@@ -9,6 +9,7 @@ import { useFiles } from '../../hooks/useFiles';
 import { fileManager } from '../../lib/file-manager';
 import { log } from '../../lib/logger';
 import R2Image from './r2-image';
+import LoadingSpinner from './loading-spinner';
 
 interface MediaItem {
   id: string;
@@ -195,48 +196,58 @@ export default function PrimaryImageSelectionModal({
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <View className="flex-1 bg-white" style={{ paddingTop: insets.top }}>
-        {/* Header */}
-        <View className="bg-white px-4 py-3 border-b border-gray-200">
-          <View className="flex-row items-center justify-between">
-            <View className="flex-row items-center">
-              <TouchableOpacity onPress={onClose} className="mr-4">
-                <Feather name="arrow-left" size={20} color="#374151" />
-              </TouchableOpacity>
-              <Text className="text-lg font-medium text-gray-900">{title}</Text>
-            </View>
+      <View style={{ flex: 1, backgroundColor: '#fff', paddingTop: insets.top / 5 }}>
+        {/* Header - Clean design without back arrow */}
+        <View style={{
+          paddingHorizontal: 16,
+          paddingVertical: 12,
+          backgroundColor: '#fff',
+          borderBottomWidth: 1,
+          borderBottomColor: '#E5E7EB',
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}>
+          <Text style={{ fontSize: 18, fontWeight: '600', color: '#111827' }}>
+            {title}
+          </Text>
 
-            {/* Upload Button */}
-            <TouchableOpacity
-              onPress={handleUpload}
-              disabled={uploading}
-              className="flex-row items-center bg-blue-500 px-3 py-2 rounded-lg"
-              style={{ opacity: uploading ? 0.6 : 1 }}
-            >
-              <MaterialIcons
-                name={uploading ? "hourglass-empty" : "add"}
-                size={16}
-                color="white"
-              />
-              <Text className="text-white text-sm font-medium ml-1">
-                {uploading ? 'Uploading...' : 'Upload'}
-              </Text>
-            </TouchableOpacity>
-          </View>
+          {/* Upload Button - Simple Black Upload Icon */}
+          <TouchableOpacity
+            onPress={handleUpload}
+            disabled={uploading}
+            style={{
+              padding: 8,
+              opacity: uploading ? 0.6 : 1
+            }}
+          >
+            {uploading ? (
+              <LoadingSpinner size={24} color="#111827" />
+            ) : (
+              <MaterialIcons name="add" size={24} color="#111827" />
+            )}
+          </TouchableOpacity>
         </View>
 
-        {/* Search Bar */}
-        <View className="bg-white px-4 py-3 border-b border-gray-200">
-          <View className="flex-row items-center bg-gray-50 rounded-lg px-3 py-2">
-            <Feather name="search" size={16} color="#9CA3AF" />
-            <TextInput
-              placeholder="Search images by name..."
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              className="flex-1 ml-2 text-base text-gray-900"
-              placeholderTextColor="#9CA3AF"
-            />
-          </View>
+        {/* Search Bar - Matching type selector design */}
+        <View style={{
+          backgroundColor: '#fff',
+          paddingHorizontal: 16,
+          paddingVertical: 12,
+          borderBottomWidth: 1,
+          borderBottomColor: '#E5E7EB',
+        }}>
+          <TextInput
+            placeholder="Search images by name..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            style={{
+              fontSize: 16,
+              color: '#111827',
+              paddingVertical: 0,
+            }}
+            placeholderTextColor="#9CA3AF"
+          />
         </View>
 
         {/* Images Grid */}

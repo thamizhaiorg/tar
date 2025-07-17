@@ -233,32 +233,25 @@ export default function TypeSelect({ selectedType, onSelect, onClose }: TypeSele
     <View style={{
       flex: 1,
       backgroundColor: '#fff',
+      paddingTop: insets.top / 5,
     }}>
-      {/* Header */}
+      {/* Header - Reduced spacing, title aligned left */}
       <View style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
         paddingHorizontal: 16,
         paddingVertical: 12,
-        paddingTop: insets.top + 12,
         backgroundColor: '#fff',
         borderBottomWidth: 1,
         borderBottomColor: '#E5E7EB',
       }}>
-        <TouchableOpacity onPress={onClose}>
-          <Ionicons name="close" size={24} color="#374151" />
-        </TouchableOpacity>
         <Text style={{ fontSize: 18, fontWeight: '600', color: '#111827' }}>
           Type
         </Text>
-        <View style={{ width: 24 }} />
       </View>
 
-      {/* Search Bar */}
+      {/* Search Bar - Matching products list design */}
       <View style={{
         backgroundColor: '#fff',
-        paddingHorizontal: 20,
+        paddingHorizontal: 16,
         paddingVertical: 12,
         borderBottomWidth: 1,
         borderBottomColor: '#E5E7EB',
@@ -266,17 +259,15 @@ export default function TypeSelect({ selectedType, onSelect, onClose }: TypeSele
         <View style={{
           flexDirection: 'row',
           alignItems: 'center',
-          backgroundColor: '#F9FAFB',
-          borderRadius: 8,
-          paddingHorizontal: 12,
-          paddingVertical: 8,
         }}>
-          <Ionicons name="search" size={20} color="#6B7280" style={{ marginRight: 8 }} />
+          <Ionicons name="search" size={20} color="#9CA3AF" />
           <TextInput
             style={{
               flex: 1,
               fontSize: 16,
               color: '#111827',
+              marginLeft: 12,
+              marginRight: 12,
             }}
             placeholder="Search or add type"
             placeholderTextColor="#9CA3AF"

@@ -196,27 +196,25 @@ export default function TagSelect({ selectedTags = [], onSelect, onClose }: TagS
     <View style={{
       flex: 1,
       backgroundColor: '#fff',
-      paddingTop: insets.top,
+      paddingTop: insets.top / 3,
     }}>
-      {/* Header */}
+      {/* Header - Reduced spacing, title aligned left */}
       <View style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingVertical: 16,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
         backgroundColor: '#fff',
         borderBottomWidth: 1,
         borderBottomColor: '#E5E7EB',
       }}>
-        <Text style={{ fontSize: 17, fontWeight: '600', color: '#111827' }}>
+        <Text style={{ fontSize: 18, fontWeight: '600', color: '#111827' }}>
           Tags
         </Text>
       </View>
 
-      {/* Search Bar */}
+      {/* Search Bar - Matching products list design */}
       <View style={{
         backgroundColor: '#fff',
-        paddingHorizontal: 20,
+        paddingHorizontal: 16,
         paddingVertical: 12,
         borderBottomWidth: 1,
         borderBottomColor: '#E5E7EB',
@@ -224,18 +222,15 @@ export default function TagSelect({ selectedTags = [], onSelect, onClose }: TagS
         <View style={{
           flexDirection: 'row',
           alignItems: 'center',
-          backgroundColor: '#F9FAFB',
-          borderRadius: 8,
-          paddingHorizontal: 12,
-          paddingVertical: 8,
         }}>
           <Ionicons name="search" size={20} color="#9CA3AF" />
           <TextInput
             style={{
               flex: 1,
-              marginLeft: 8,
               fontSize: 16,
               color: '#111827',
+              marginLeft: 12,
+              marginRight: 12,
             }}
             placeholder="Search tags..."
             placeholderTextColor="#9CA3AF"
