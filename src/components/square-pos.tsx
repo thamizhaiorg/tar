@@ -163,11 +163,11 @@ export default function SquarePOS({ onClose, onOrderCreated }: SquarePOSProps) {
     
     const variantTitle = [item.option1, item.option2, item.option3]
       .filter(Boolean)
-      .join(' / ');
+      .join(' ');
     
     const price = item.saleprice || item.price || 0;
     const productTitle = item.product?.title || 'Unknown Product';
-    const displayTitle = variantTitle ? `${productTitle} - ${variantTitle}` : productTitle;
+    const displayTitle = variantTitle ? `${productTitle} ${variantTitle}` : productTitle;
     
     const existingCartItem = cart.find(cartItem => cartItem.itemId === item.id);
     
@@ -445,18 +445,17 @@ export default function SquarePOS({ onClose, onOrderCreated }: SquarePOSProps) {
               className="flex-1 ml-2 text-base"
               placeholderTextColor="#9CA3AF"
             />
-            <TouchableOpacity>
-              <Feather name="plus" size={20} color="#6B7280" />
-            </TouchableOpacity>
           </View>
         </View>
 
 
 
         {/* Categories and Products */}
-        <ScrollView className="flex-1 bg-white">
-
-
+        <ScrollView 
+          className="flex-1 bg-white"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: cart.length > 0 ? 200 : 20 }}
+        >
           {/* Categories */}
           {Object.entries(categorizedItems).map(([category, categoryItems]) => (
             <View key={category} className="px-4 py-2">
@@ -478,11 +477,11 @@ export default function SquarePOS({ onClose, onOrderCreated }: SquarePOSProps) {
           ))}
 
           {/* Individual Items */}
-          {filteredItems.slice(0, 10).map((item: Item) => {
+          {filteredItems.map((item: Item) => {
             const price = item.saleprice || item.price || 0;
             const productTitle = item.product?.title || 'Unknown Product';
-            const variantTitle = [item.option1, item.option2, item.option3].filter(Boolean).join(' / ');
-            const displayTitle = variantTitle ? `${productTitle} - ${variantTitle}` : productTitle;
+            const variantOptions = [item.option1, item.option2, item.option3].filter(Boolean);
+            const displayTitle = variantOptions.length > 0 ? `${productTitle} ${variantOptions.join(' ')}` : productTitle;
             
             return (
               <TouchableOpacity
@@ -494,16 +493,16 @@ export default function SquarePOS({ onClose, onOrderCreated }: SquarePOSProps) {
                   <View className="flex-row items-center flex-1">
                     <View className="w-10 h-10 bg-orange-500 rounded items-center justify-center mr-4">
                       <Text className="text-white font-bold text-lg">
-                        {(productTitle || 'I').substring(0, 2)}
+                        {(productTitle || 'P').charAt(0).toUpperCase()}
                       </Text>
                     </View>
                     <View className="flex-1">
-                      <Text className="text-lg font-medium text-gray-900">
+                      <Text className="text-lg font-medium text-gray-900" numberOfLines={1}>
                         {displayTitle}
                       </Text>
                       {item.sku && (
                         <Text className="text-sm text-gray-500">
-                          SKU: {item.sku}
+                          {item.sku}
                         </Text>
                       )}
                     </View>

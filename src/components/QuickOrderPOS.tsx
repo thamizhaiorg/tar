@@ -243,39 +243,38 @@ export default function QuickOrderPOS({ onClose, onOrderComplete }: QuickOrderPO
   // Render product item
   const renderProduct = ({ item: product }: { item: any }) => {
     const price = product.saleprice || product.price || 0;
+    const firstVariant = product.item && product.item.length > 0 ? product.item[0] : null;
     
     return (
       <TouchableOpacity
         onPress={() => addToCart(product)}
-        className="bg-white rounded-xl p-4 m-2 shadow-sm"
-        style={{ width: '45%' }}
+        className="bg-white rounded-lg p-3 mb-3 shadow-sm border border-gray-100"
         activeOpacity={0.8}
       >
-        <View className="w-full h-20 bg-gray-100 rounded-lg mb-3 overflow-hidden">
-          {product.image ? (
-            <R2Image
-              url={product.image}
-              style={{ width: '100%', height: '100%' }}
-              resizeMode="cover"
-            />
-          ) : (
-            <View className="w-full h-full items-center justify-center">
-              <Feather name="package" size={24} color="#9CA3AF" />
-            </View>
-          )}
-        </View>
-        
-        <Text className="text-base font-semibold text-gray-900 mb-1" numberOfLines={2}>
-          {product.title || 'Product'}
-        </Text>
-        
-        <View className="flex-row items-center justify-between">
+        <View className="flex-row items-center">
+          {/* Product Avatar */}
+          <View className="w-12 h-12 bg-orange-500 rounded-lg items-center justify-center mr-3">
+            <Text className="text-white font-bold text-lg">
+              {(product.title || 'P').charAt(0).toUpperCase()}
+            </Text>
+          </View>
+
+          {/* Product Info */}
+          <View className="flex-1 mr-3">
+            <Text className="text-base font-semibold text-gray-900 mb-1" numberOfLines={1}>
+              {product.title || 'Product'}
+            </Text>
+            {firstVariant && (
+              <Text className="text-sm text-gray-500 mb-1">
+                {firstVariant.sku}
+              </Text>
+            )}
+          </View>
+
+          {/* Price */}
           <Text className="text-lg font-bold text-gray-900">
             {formatCurrency(price)}
           </Text>
-          <View className="w-8 h-8 bg-blue-600 rounded-full items-center justify-center">
-            <Feather name="plus" size={16} color="white" />
-          </View>
         </View>
       </TouchableOpacity>
     );
@@ -388,8 +387,7 @@ export default function QuickOrderPOS({ onClose, onOrderComplete }: QuickOrderPO
             data={filteredProducts}
             renderItem={renderProduct}
             keyExtractor={(item) => item.id}
-            numColumns={2}
-            contentContainerStyle={{ padding: 8 }}
+            contentContainerStyle={{ padding: 16, paddingBottom: cart.length > 0 ? 100 : 20 }}
             showsVerticalScrollIndicator={false}
           />
         )}
