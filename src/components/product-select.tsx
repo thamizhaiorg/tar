@@ -33,7 +33,7 @@ export default function ProductSelect({ collectionId, onClose }: ProductSelectPr
         $: { 
           where: { 
             storeId: currentStore.id,
-            status: { in: ['active', true] } // Filter for active products only
+            status: 'active' // Filter for active products only
           },
           order: {
             title: 'asc' // Use indexed field for ordering

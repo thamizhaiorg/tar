@@ -66,7 +66,7 @@ export default function QuickOrderPOS({ onClose, onOrderComplete }: QuickOrderPO
         where: {
           storeId: currentStore?.id || '',
           pos: true,
-          status: { in: ['active', true] } // Filter for active products only
+          status: 'active' // Filter for active products only
         },
         order: {
           createdAt: 'desc' // Use consistent field naming

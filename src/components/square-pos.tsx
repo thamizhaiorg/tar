@@ -8,23 +8,22 @@ import { id } from '@instantdb/react-native';
 import { hapticFeedback } from '../lib/haptics';
 import R2Image from './ui/r2-image';
 
-interface Product {
+interface Item {
   id: string;
-  title: string;
-  image?: string;
+  sku: string;
   price?: number;
   saleprice?: number;
-  pos?: boolean;
-  category?: string;
-  item?: Array<{
+  option1?: string;
+  option2?: string;
+  option3?: string;
+  image?: string;
+  productId: string;
+  product?: {
     id: string;
-    sku: string;
-    price?: number;
-    saleprice?: number;
-    option1?: string;
-    option2?: string;
-    option3?: string;
-  }>;
+    title: string;
+    image?: string;
+    category?: string;
+  };
 }
 
 interface CartItem {
@@ -56,110 +55,137 @@ export default function SquarePOS({ onClose, onOrderCreated }: SquarePOSProps) {
   const [showPayment, setShowPayment] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Query products from InstantDB with optimized schema
-  const { data, isLoading } = db.useQuery({
-    products: {
-      item: {},
-      brand: {}, // Use new relationship links
-      category: {},
-      type: {},
-      vendor: {},
-      $: {
-        where: {
-          storeId: currentStore?.id || '',
-          pos: true,
-          status: { in: ['active', true] } // Filter for active products only
-        },
-        order: {
-          createdAt: 'desc' // Use consistent field naming
+  // Query products that are active and POS-enabled, then get their items
+  const { data, isLoading } = db.useQuery(
+    currentStore?.id ? {
+      products: {
+        item: {},
+        $: {
+          where: {
+            storeId: currentStore.id,
+            pos: true,
+            status: 'active'
+          },
+          order: {
+            createdAt: 'desc'
+          }
         }
       }
-    }
-  });
+    } : null
+  );
 
-  const products = data?.products || [];
+  // Debug query to see all products in the store (without filters)
+  const { data: debugData } = db.useQuery(
+    currentStore?.id ? {
+      products: {
+        item: {},
+        $: {
+          where: {
+            storeId: currentStore.id
+          },
+          order: {
+            createdAt: 'desc'
+          }
+        }
+      }
+    } : null
+  );
 
-  // Group products by category
-  const categorizedProducts = useMemo(() => {
-    const categories: { [key: string]: Product[] } = {};
+  // Flatten all items from active POS products
+  const items = useMemo(() => {
+    const products = data?.products || [];
+    const allItems: Item[] = [];
     
-    products.forEach((product: Product) => {
-      const category = product.category || 'Other';
+    console.log('Square POS Debug - Products found:', products.length);
+    console.log('Square POS Debug - Sample product:', products[0]);
+    
+    products.forEach((product: any) => {
+      console.log('Square POS Debug - Product:', product.title, 'Items:', product.item?.length || 0);
+      if (product.item && Array.isArray(product.item)) {
+        product.item.forEach((item: any) => {
+          allItems.push({
+            ...item,
+            product: {
+              id: product.id,
+              title: product.title,
+              image: product.image,
+              category: product.category
+            }
+          });
+        });
+      }
+    });
+    
+    console.log('Square POS Debug - Total items found:', allItems.length);
+    return allItems;
+  }, [data?.products]);
+
+  // Group items by category
+  const categorizedItems = useMemo(() => {
+    const categories: { [key: string]: Item[] } = {};
+    
+    items.forEach((item: Item) => {
+      const category = item.product?.category || 'Other';
       if (!categories[category]) {
         categories[category] = [];
       }
-      categories[category].push(product);
+      categories[category].push(item);
     });
 
     return categories;
-  }, [products]);
+  }, [items]);
 
-  // Filter products based on search
-  const filteredProducts = useMemo(() => {
-    if (!searchQuery.trim()) return products.slice(0, 20);
+  // Filter items based on search
+  const filteredItems = useMemo(() => {
+    if (!searchQuery.trim()) return items.slice(0, 20);
     
     const query = searchQuery.toLowerCase();
-    return products.filter((product: Product) =>
-      (product.title || '').toLowerCase().includes(query)
-    );
-  }, [products, searchQuery]);
+    return items.filter((item: Item) => {
+      const productTitle = item.product?.title || '';
+      const variantTitle = [item.option1, item.option2, item.option3].filter(Boolean).join(' ');
+      const sku = item.sku || '';
+      
+      return (
+        productTitle.toLowerCase().includes(query) ||
+        variantTitle.toLowerCase().includes(query) ||
+        sku.toLowerCase().includes(query)
+      );
+    });
+  }, [items, searchQuery]);
 
   // Calculate cart total
   const cartTotal = useMemo(() => {
     return cart.reduce((sum, item) => sum + item.total, 0);
   }, [cart]);
 
-  const addToCart = (product: Product) => {
+  const addToCart = (item: Item) => {
     hapticFeedback.light();
     
-    // Check if product has variants
-    if (product.item && product.item.length > 0) {
-      const firstVariant = product.item[0];
-      const variantTitle = [firstVariant.option1, firstVariant.option2, firstVariant.option3]
-        .filter(Boolean)
-        .join(' / ');
-      
-      const price = firstVariant.saleprice || firstVariant.price || product.saleprice || product.price || 0;
-      
-      const existingItem = cart.find(item => 
-        item.productId === product.id && item.itemId === firstVariant.id
-      );
-      
-      if (existingItem) {
-        updateQuantity(existingItem.id, existingItem.qty + 1);
-      } else {
-        const newItem: CartItem = {
-          id: id(),
-          productId: product.id,
-          itemId: firstVariant.id,
-          title: product.title,
-          variantTitle: variantTitle || undefined,
-          price,
-          qty: 1,
-          total: price,
-          image: product.image
-        };
-        setCart(prev => [...prev, newItem]);
-      }
+    const variantTitle = [item.option1, item.option2, item.option3]
+      .filter(Boolean)
+      .join(' / ');
+    
+    const price = item.saleprice || item.price || 0;
+    const productTitle = item.product?.title || 'Unknown Product';
+    const displayTitle = variantTitle ? `${productTitle} - ${variantTitle}` : productTitle;
+    
+    const existingCartItem = cart.find(cartItem => cartItem.itemId === item.id);
+    
+    if (existingCartItem) {
+      updateQuantity(existingCartItem.id, existingCartItem.qty + 1);
     } else {
-      // Product without variants
-      const price = product.saleprice || product.price || 0;
-      const existingItem = cart.find(item => item.productId === product.id);
-      
-      if (existingItem) {
-        updateQuantity(existingItem.id, existingItem.qty + 1);
-      } else {
-        const newItem: CartItem = {
-          id: id(),
-          productId: product.id,
-          title: product.title,
-          price,
-          qty: 1,
-          total: price,
-          image: product.image
-        };
-        setCart(prev => [...prev, newItem]);
-      }
+      const newCartItem: CartItem = {
+        id: id(),
+        productId: item.productId,
+        itemId: item.id,
+        title: displayTitle,
+        variantTitle: variantTitle || undefined,
+        price,
+        qty: 1,
+        total: price,
+        image: item.image || item.product?.image
+      };
+      setCart(prev => [...prev, newCartItem]);
     }
   };
 
@@ -195,8 +221,8 @@ export default function SquarePOS({ onClose, onOrderCreated }: SquarePOSProps) {
       const orderData = {
         storeId: currentStore.id,
         orderNumber,
-        referid: orderId,
-        createdat: new Date(),
+        referenceId: orderId,
+        createdAt: new Date(),
         status: 'completed',
         fulfillmentStatus: 'fulfilled',
         paymentStatus: 'paid',
@@ -217,13 +243,13 @@ export default function SquarePOS({ onClose, onOrderCreated }: SquarePOSProps) {
       const orderItemTransactions = cart.map(item => {
         const itemId = id();
         return db.tx.orderitems[itemId].update({
-          orderid: orderId,
+          orderId: orderId,
           productId: item.productId,
           itemId: item.itemId,
           sku: item.title?.toUpperCase().replace(/\s+/g, '-') || 'ITEM',
           title: item.title,
           variantTitle: item.variantTitle,
-          qty: item.qty,
+          quantity: item.qty,
           price: item.price,
           taxRate: 0,
           taxAmount: 0,
@@ -425,31 +451,14 @@ export default function SquarePOS({ onClose, onOrderCreated }: SquarePOSProps) {
           </View>
         </View>
 
+
+
         {/* Categories and Products */}
         <ScrollView className="flex-1 bg-white">
-          {/* Quick Actions */}
-          <View className="px-4 py-2">
-            {[
-              { icon: 'package', label: 'Items', color: 'bg-blue-600' },
-              { icon: 'gift', label: 'Rewards', color: 'bg-blue-600' },
-              { icon: 'tag', label: 'Discounts', color: 'bg-blue-600' },
-              { icon: 'calendar', label: 'Services', color: 'bg-blue-600' }
-            ].map((action, index) => (
-              <TouchableOpacity
-                key={action.label}
-                className="flex-row items-center py-4 border-b border-gray-100"
-              >
-                <View className={`w-10 h-10 ${action.color} rounded items-center justify-center mr-4`}>
-                  <Feather name={action.icon as any} size={20} color="white" />
-                </View>
-                <Text className="flex-1 text-lg font-medium text-gray-900">{action.label}</Text>
-                <Feather name="chevron-right" size={20} color="#9CA3AF" />
-              </TouchableOpacity>
-            ))}
-          </View>
+
 
           {/* Categories */}
-          {Object.entries(categorizedProducts).map(([category, categoryProducts]) => (
+          {Object.entries(categorizedItems).map(([category, categoryItems]) => (
             <View key={category} className="px-4 py-2">
               <TouchableOpacity className="flex-row items-center justify-between py-4 border-b border-gray-100">
                 <View className="flex-row items-center">
@@ -460,7 +469,7 @@ export default function SquarePOS({ onClose, onOrderCreated }: SquarePOSProps) {
                   </View>
                   <View>
                     <Text className="text-lg font-medium text-gray-900">{category}</Text>
-                    <Text className="text-gray-500">{categoryProducts.length} items</Text>
+                    <Text className="text-gray-500">{categoryItems.length} items</Text>
                   </View>
                 </View>
                 <Feather name="chevron-right" size={20} color="#9CA3AF" />
@@ -468,25 +477,36 @@ export default function SquarePOS({ onClose, onOrderCreated }: SquarePOSProps) {
             </View>
           ))}
 
-          {/* Individual Products */}
-          {filteredProducts.slice(0, 10).map((product: Product) => {
-            const price = product.saleprice || product.price || 0;
+          {/* Individual Items */}
+          {filteredItems.slice(0, 10).map((item: Item) => {
+            const price = item.saleprice || item.price || 0;
+            const productTitle = item.product?.title || 'Unknown Product';
+            const variantTitle = [item.option1, item.option2, item.option3].filter(Boolean).join(' / ');
+            const displayTitle = variantTitle ? `${productTitle} - ${variantTitle}` : productTitle;
+            
             return (
               <TouchableOpacity
-                key={product.id}
-                onPress={() => addToCart(product)}
+                key={item.id}
+                onPress={() => addToCart(item)}
                 className="px-4 py-3 border-b border-gray-100"
               >
                 <View className="flex-row items-center justify-between">
                   <View className="flex-row items-center flex-1">
                     <View className="w-10 h-10 bg-orange-500 rounded items-center justify-center mr-4">
                       <Text className="text-white font-bold text-lg">
-                        {(product.title || 'P').substring(0, 2)}
+                        {(productTitle || 'I').substring(0, 2)}
                       </Text>
                     </View>
-                    <Text className="text-lg font-medium text-gray-900 flex-1">
-                      {product.title}
-                    </Text>
+                    <View className="flex-1">
+                      <Text className="text-lg font-medium text-gray-900">
+                        {displayTitle}
+                      </Text>
+                      {item.sku && (
+                        <Text className="text-sm text-gray-500">
+                          SKU: {item.sku}
+                        </Text>
+                      )}
+                    </View>
                   </View>
                   <Text className="text-lg font-bold text-gray-900">
                     {formatCurrency(price)}

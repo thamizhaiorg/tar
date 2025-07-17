@@ -66,7 +66,7 @@ export default function OrderProductSelect({ onProductsSelect, onClose }: OrderP
         where: {
           storeId: currentStore?.id || '',
           pos: true, // Only show POS-enabled products
-          status: { in: ['active', true] } // Filter for active products only
+          status: 'active' // Filter for active products only
         },
         order: {
           createdAt: 'desc' // Use consistent field naming
