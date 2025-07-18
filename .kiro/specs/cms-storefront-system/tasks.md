@@ -1,10 +1,11 @@
 # Implementation Plan
 
-- [ ] 1. Set up core storefront data models and database schema
-  - Create InstantDB schema extensions for storefronts, pages, blocks, and posts
-  - Implement TypeScript interfaces for all storefront entities
+- [ ] 1. Set up multi-database architecture and core data models
+  - Create Cloudflare D1 database schema for storefronts, pages, blocks, and posts
+  - Set up Turso database schema for vector embeddings and search functionality
+  - Implement TypeScript interfaces for all storefront entities across databases
   - Write validation functions for storefront configuration data
-  - Create database migration scripts for new tables
+  - Create database migration scripts for D1 and Turso schemas
   - _Requirements: 1.1, 1.3, 6.1_
 
 - [ ] 2. Implement basic storefront management service
@@ -57,8 +58,7 @@
 
 - [ ] 8. Build storefront rendering engine
   - Create server-side rendering system for storefronts
-  - Implement static page generation for product pages
-  - Add dynamic content rendering with caching
+  - Implement dynamic content rendering with caching
   - Create responsive design system for mobile/desktop
   - Write performance tests for rendering speed
   - _Requirements: 5.1, 5.6, 6.5_
@@ -160,10 +160,10 @@
   - _Requirements: 6.1, 6.5_
 
 - [ ] 21. Build deployment and scaling infrastructure
-  - Create containerized deployment configuration for storefront application
-  - Implement Cloudflare Workers for edge routing and tenant identification
-  - Set up auto-scaling policies and load balancer configuration
-  - Create health checks and monitoring for all application instances
+  - Create Cloudflare Workers deployment for backend API and dynamic routing
+  - Set up Cloudflare Pages deployment for SvelteKit frontend with automatic builds
+  - Implement edge routing and tenant identification in Cloudflare Workers
+  - Configure custom domain mapping and SSL certificate management
   - Implement database connection pooling and read replica setup
   - Add backup and disaster recovery procedures
   - Write infrastructure tests and monitoring alerts

@@ -1,218 +1,185 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
-import { Image } from 'expo-image';
+import React, { useState, useCallback, useEffect } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, BackHandler } from 'react-native';
+import { useStore } from '../lib/store-context';
 import { useAuth } from '../lib/auth-context';
-import { r2Service } from '../lib/r2-service';
-import BottomNavigation, { BottomTab } from './nav';
-import BottomTabContent from './tabs';
+import { db } from '../lib/instant';
 
-type StorefrontScreen = 'work' | 'ai' | 'tasks' | 'people';
+type StorefrontScreen = 'site-settings' | 'theme-design' | 'online-orders' | 'seo-marketing' | 'analytics' | 'domain-settings';
 
 interface StorefrontProps {
+  onNavigate: (screen: StorefrontScreen) => void;
   onClose: () => void;
 }
 
-export default function StorefrontScreen({ onClose }: StorefrontProps) {
-  const insets = useSafeAreaInsets();
-  const { peopleaProfile } = useAuth();
-  const [activeBottomTab, setActiveBottomTab] = useState<BottomTab>('workspace');
-  const [showBottomTabs, setShowBottomTabs] = useState(true);
-  const [displayImageUrl, setDisplayImageUrl] = useState<string>('');
+export default function Storefront({ onNavigate, onClose }: StorefrontProps) {
+  const { currentStore } = useStore();
+  const [storefrontMetrics, setStorefrontMetrics] = useState({ 
+    onlineOrders: 0, 
+    siteVisitors: 0, 
+    conversionRate: 0 
+  });
 
-  // Set image URL when profile is available
-  React.useEffect(() => {
-    if (peopleaProfile?.profileImage) {
-      if (peopleaProfile.profileImage.includes('r2.cloudflarestorage.com')) {
-        const generateSignedUrl = async () => {
-          try {
-            const key = r2Service.extractKeyFromUrl(peopleaProfile.profileImage);
-            if (key) {
-              const signedUrl = await r2Service.getSignedUrl(key, 3600);
-              if (signedUrl) {
-                setDisplayImageUrl(signedUrl);
-                Image.prefetch(signedUrl);
-              } else {
-                setDisplayImageUrl(peopleaProfile.profileImage);
-              }
-            } else {
-              setDisplayImageUrl(peopleaProfile.profileImage);
-            }
-          } catch (error) {
-            setDisplayImageUrl(peopleaProfile.profileImage);
-          }
-        };
-        generateSignedUrl();
-      } else {
-        setDisplayImageUrl(peopleaProfile.profileImage);
-        Image.prefetch(peopleaProfile.profileImage);
-      }
+  // Storefront status and notification data
+  const storefrontData = {
+    siteNotifications: [
+      { type: 'visitor', message: 'New visitor from Google', time: '5 mins' },
+      { type: 'order', message: 'Online order received', time: '12 mins' }
+    ]
+  };
+
+  // Fetch storefront data with optimized schema
+  const { data: storefrontOrdersData } = db.useQuery({
+    orders: {
+      $: {
+        where: {
+          storeId: currentStore?.id || '',
+          source: 'online', // Filter for online orders only
+        },
+        order: {
+          createdAt: 'desc'
+        }
+      },
+    },
+  });
+
+  // Calculate storefront metrics
+  useEffect(() => {
+    if (storefrontOrdersData?.orders) {
+      const onlineOrders = storefrontOrdersData.orders.length;
+      const siteVisitors = Math.floor(onlineOrders * 4.2); // Estimated visitors based on conversion
+      const conversionRate = onlineOrders > 0 ? ((onlineOrders / siteVisitors) * 100) : 0;
+      setStorefrontMetrics({ onlineOrders, siteVisitors, conversionRate });
+    }
+  }, [storefrontOrdersData]);
+
+  // Handle Android back button
+  useEffect(() => {
+    const backAction = () => {
+      onClose();
+      return true;
+    };
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
+    return () => {
+      backHandler.remove();
+    };
+  }, [onClose]);
+
+  const handleItemPress = (itemId: string) => {
+    // Handle special cases
+    if (itemId === 'analytics') {
+      onNavigate('analytics' as StorefrontScreen);
+    } else if (itemId === 'storefront-settings') {
+      // Close menu and navigate to site settings
+      onClose();
+      onNavigate('site-settings' as StorefrontScreen);
     } else {
-      setDisplayImageUrl('');
+      onNavigate(itemId as StorefrontScreen);
     }
-  }, [peopleaProfile?.profileImage]);
-
-  const handleBottomTabPress = useCallback((tab: BottomTab) => {
-    setActiveBottomTab(tab);
-    if (tab === 'workspace') {
-      setShowBottomTabs(true);
-    } else {
-      setShowBottomTabs(false);
-    }
-  }, []);
-
-  const renderMainContent = () => {
-    if (!showBottomTabs) {
-      return (
-        <BottomTabContent
-          activeTab={activeBottomTab}
-          currentScreen="storefront"
-        />
-      );
-    }
-
-    return (
-      <ScrollView className="flex-1 bg-gray-50" showsVerticalScrollIndicator={false}>
-        {/* Header Section */}
-        <View className="bg-white px-4 pt-6 pb-4">
-          <Text className="text-2xl font-bold text-gray-900 mb-1">
-            Storefront Site
-          </Text>
-          <Text className="text-gray-600">
-            Manage your online storefront and web presence
-          </Text>
-        </View>
-
-        {/* Stats Section */}
-        <View className="px-4 pt-4">
-          <View className="flex-row gap-3 mb-6">
-            <View className="flex-1 bg-white p-4 rounded-lg">
-              <Text className="text-2xl font-bold text-gray-900">0</Text>
-              <Text className="text-sm text-gray-600 mt-1">Online Orders</Text>
-            </View>
-            <View className="flex-1 bg-white p-4 rounded-lg">
-              <Text className="text-2xl font-bold text-gray-900">0</Text>
-              <Text className="text-sm text-gray-600 mt-1">Site Visitors</Text>
-            </View>
-          </View>
-
-          {/* Main Actions */}
-          <View className="gap-3">
-            {/* Site Settings */}
-            <TouchableOpacity className="bg-white p-4 rounded-lg flex-row items-center">
-              <View className="w-10 h-10 bg-blue-50 rounded-lg items-center justify-center mr-3">
-                <Feather name="globe" size={20} color="#3B82F6" />
-              </View>
-              <View className="flex-1">
-                <Text className="text-base font-semibold text-gray-900">
-                  Site Settings
-                </Text>
-                <Text className="text-sm text-gray-600 mt-0.5">
-                  Configure your storefront appearance and settings
-                </Text>
-              </View>
-              <Feather name="chevron-right" size={20} color="#9CA3AF" />
-            </TouchableOpacity>
-
-            {/* Theme & Design */}
-            <TouchableOpacity className="bg-white p-4 rounded-lg flex-row items-center">
-              <View className="w-10 h-10 bg-purple-50 rounded-lg items-center justify-center mr-3">
-                <Feather name="edit-3" size={20} color="#8B5CF6" />
-              </View>
-              <View className="flex-1">
-                <Text className="text-base font-semibold text-gray-900">
-                  Theme & Design
-                </Text>
-                <Text className="text-sm text-gray-600 mt-0.5">
-                  Customize colors, fonts, and layout
-                </Text>
-              </View>
-              <Feather name="chevron-right" size={20} color="#9CA3AF" />
-            </TouchableOpacity>
-
-            {/* Online Orders */}
-            <TouchableOpacity className="bg-white p-4 rounded-lg flex-row items-center">
-              <View className="w-10 h-10 bg-green-50 rounded-lg items-center justify-center mr-3">
-                <Feather name="package" size={20} color="#10B981" />
-              </View>
-              <View className="flex-1">
-                <Text className="text-base font-semibold text-gray-900">
-                  Online Orders
-                </Text>
-                <Text className="text-sm text-gray-600 mt-0.5">
-                  Manage orders from your website
-                </Text>
-              </View>
-              <Feather name="chevron-right" size={20} color="#9CA3AF" />
-            </TouchableOpacity>
-
-            {/* SEO & Marketing */}
-            <TouchableOpacity className="bg-white p-4 rounded-lg flex-row items-center">
-              <View className="w-10 h-10 bg-orange-50 rounded-lg items-center justify-center mr-3">
-                <Feather name="trending-up" size={20} color="#F59E0B" />
-              </View>
-              <View className="flex-1">
-                <Text className="text-base font-semibold text-gray-900">
-                  SEO & Marketing
-                </Text>
-                <Text className="text-sm text-gray-600 mt-0.5">
-                  Optimize for search engines and social media
-                </Text>
-              </View>
-              <Feather name="chevron-right" size={20} color="#9CA3AF" />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Bottom Spacing */}
-        <View className="h-8" />
-      </ScrollView>
-    );
   };
 
   return (
     <View className="flex-1 bg-white">
-      {/* Header */}
-      <View style={{ paddingTop: insets.top }}>
-        <View className="px-4 h-16 flex items-center flex-row justify-between bg-white border-b border-gray-200">
-          <View className="flex-row items-center">
-            <TouchableOpacity
-              onPress={onClose}
-              className="flex-row items-center"
-            >
-              <Text className="text-xl mr-2">🌐</Text>
-              <Text className="text-xl font-semibold text-gray-900">Storefront</Text>
-            </TouchableOpacity>
-          </View>
-          
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+        <View className="px-6 pt-6">
+          {/* Analytics Card - White */}
           <TouchableOpacity
-            onPress={onClose}
-            className="w-8 h-8 rounded-full overflow-hidden"
+            onPress={() => handleItemPress('analytics')}
+            className="bg-white p-4 mb-1"
+            style={{ minHeight: 120 }}
           >
-            <Image
-              source={
-                displayImageUrl && displayImageUrl.length > 0 && displayImageUrl !== ''
-                  ? { uri: displayImageUrl }
-                  : require('../../assets/adaptive-icon.png')
-              }
-              style={{ width: 32, height: 32 }}
-              contentFit="cover"
-              cachePolicy="memory-disk"
-            />
+            <View className="flex-1">
+              <Text className="text-black text-2xl font-bold mb-2">Analytics</Text>
+              <Text className="text-gray-500 text-xl font-bold">
+                {storefrontData.siteNotifications.length > 0
+                  ? storefrontData.siteNotifications[0].message
+                  : 'New visitor from Google'}
+              </Text>
+            </View>
           </TouchableOpacity>
+
+          {/* Storefront Card - Light White */}
+          <View
+            className="p-6"
+            style={{ minHeight: 504, borderRadius: 10, backgroundColor: '#F5F5F5' }}
+          >
+            <View className="flex-1">
+              {/* Header */}
+              <View className="mb-4">
+                <View className="flex-row items-center justify-start mb-3">
+                  <TouchableOpacity 
+                    onPress={() => handleItemPress('domain-settings')}
+                    className="px-3 py-1 border border-gray-300"
+                    style={{ borderRadius: 6 }}
+                  >
+                    <Text className="text-green-800 text-sm">
+                      {currentStore?.name?.toLowerCase().replace(/\s+/g, '') || 'storea'}.mystore.com
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Storefront Metrics */}
+              <View className="mb-6">
+                <View className="flex-row justify-between mb-4">
+                  <View>
+                    <Text className="text-gray-600 text-sm">Online Orders</Text>
+                    <Text className="text-black text-2xl font-bold">
+                      {storefrontMetrics.onlineOrders}
+                    </Text>
+                  </View>
+                  <View>
+                    <Text className="text-gray-600 text-sm">Site Visitors</Text>
+                    <Text className="text-black text-2xl font-bold">{storefrontMetrics.siteVisitors}</Text>
+                  </View>
+                </View>
+                
+                {/* Launch Site Button */}
+                <TouchableOpacity
+                  onPress={() => handleItemPress('storefront-settings')}
+                  className="bg-black py-4 px-6 items-center"
+                  style={{ borderRadius: 8 }}
+                >
+                  <Text className="text-white text-lg font-semibold">Launch Site</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Bottom row with circles and arrow */}
+              <View className="flex-row items-center justify-between mt-auto">
+                <View className="flex-row">
+                  <TouchableOpacity
+                    onPress={() => handleItemPress('site-settings')}
+                    className="w-12 h-12 bg-blue-400 items-center justify-center mr-3"
+                    style={{ borderRadius: 24 }}
+                  >
+                    <Text className="text-black text-xl font-bold">S</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => handleItemPress('theme-design')}
+                    className="w-12 h-12 bg-purple-400 items-center justify-center mr-3"
+                    style={{ borderRadius: 24 }}
+                  >
+                    <Text className="text-black text-xl font-bold">T</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => handleItemPress('online-orders')}
+                    className="w-12 h-12 bg-green-400 items-center justify-center"
+                    style={{ borderRadius: 24 }}
+                  >
+                    <Text className="text-black text-xl font-bold">O</Text>
+                  </TouchableOpacity>
+                </View>
+                <TouchableOpacity
+                  onPress={() => handleItemPress('seo-marketing')}
+                  className="w-12 h-12 bg-black items-center justify-center"
+                  style={{ borderRadius: 24 }}
+                >
+                  <Text className="text-white text-xl font-bold">→</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
         </View>
-      </View>
-
-      {/* Main Content */}
-      {renderMainContent()}
-
-      {/* Bottom Navigation */}
-      <BottomNavigation
-        activeTab={activeBottomTab}
-        onTabPress={handleBottomTabPress}
-        currentScreen="storefront"
-      />
+      </ScrollView>
     </View>
   );
 }

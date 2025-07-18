@@ -4,6 +4,52 @@
 
 The CMS-powered storefront system is a multi-tenant SaaS platform that enables TAR POS users to create and manage e-commerce websites. The system leverages a microservices architecture with edge computing to support millions of users, each with custom domains. The design emphasizes real-time data synchronization, scalable content delivery, and a flexible block-based content management system.
 
+## Frontend Framework Choice
+
+**Selected: SvelteKit on Cloudflare Workers + Pages**
+- **Ultra-fast performance**: Minimal JavaScript bundle sizes and optimal runtime performance
+- **Server-side rendering**: Perfect for SEO and fast initial loads
+- **Cloudflare Workers**: Backend API and dynamic routing at the edge
+- **Cloudflare Pages**: Frontend deployment with automatic builds
+- **Multi-tenant support**: Dynamic routing based on domain/subdomain
+- **Real-time updates**: InstantDB handles all real-time synchronization automatically
+- **Developer experience**: Simple, intuitive syntax with excellent TypeScript support
+- **Bundle size**: Smallest framework footprint for optimal loading speeds
+
+## Recommended Project Structure
+
+```
+📁 tar-pos-system/
+├── 📁 apps/
+│   ├── 📁 mobile/           # Your existing Expo app (CMS)
+│   │   ├── src/
+│   │   ├── app.json
+│   │   └── package.json
+│   │
+│   └── 📁 storefront/       # New SvelteKit storefront
+│       ├── src/
+│       │   ├── routes/      # SvelteKit pages
+│       │   ├── lib/         # Services & utilities
+│       │   └── app.html
+│       ├── workers/         # Cloudflare Workers
+│       ├── package.json
+│       └── svelte.config.js
+│
+├── 📁 database/             # Database schemas & migrations
+│   ├── d1-schema.sql
+│   ├── turso-schema.sql
+│   └── migrations/
+│
+└── package.json             # Root package.json for workspace
+```
+
+**Project Structure Benefits:**
+- **Clean separation** - Each app is self-contained
+- **No shared dependencies** - Each app manages its own packages
+- **Simple workspace** - Just for running both apps together
+- **Easy deployment** - Each app deploys independently
+- **Clear ownership** - Mobile team works in `/mobile`, web team in `/storefront`
+
 ## Architecture
 
 ### High-Level Architecture
@@ -31,9 +77,10 @@ graph TB
     end
     
     subgraph "Data Layer"
-        PrimaryDB[(Primary Database)]
+        D1DB[(Cloudflare D1 - Published Blocks & Design)]
+        InstantDB[(InstantDB - Products, POS Data & Draft Blocks)]
+        TursoDB[(Turso - Vector Search)]
         CacheDB[(Redis Cache)]
-        SearchDB[(Elasticsearch)]
         MediaStorage[(R2 Storage)]
         AnalyticsDB[(ClickHouse)]
     end
@@ -54,14 +101,16 @@ graph TB
     Gateway --> MediaAPI
     Gateway --> AnalyticsAPI
     
-    StorefrontAPI --> PrimaryDB
+    StorefrontAPI --> D1DB
+    StorefrontAPI --> InstantDB
+    StorefrontAPI --> TursoDB
     StorefrontAPI --> CacheDB
-    CMSAPI --> PrimaryDB
-    OrderAPI --> PrimaryDB
+    CMSAPI --> D1DB
+    OrderAPI --> InstantDB
     MediaAPI --> MediaStorage
     AnalyticsAPI --> AnalyticsDB
     
-    SyncService --> PrimaryDB
+    SyncService --> InstantDB
     EmailService --> OrderAPI
     ImageProcessor --> MediaStorage
     SEOService --> StorefrontAPI
@@ -138,6 +187,42 @@ graph TB
     App3 --> Storage
 ```
 
+**Cloudflare Workers + Pages Deployment**:
+```mermaid
+graph TB
+    subgraph "Cloudflare Edge Network"
+        CDN[Cloudflare CDN]
+        Workers[Cloudflare Workers]
+        Pages[Cloudflare Pages]
+        DNS[DNS Management]
+    end
+    
+    subgraph "Data Layer"
+        D1[(Cloudflare D1)]
+        InstantDB[(InstantDB)]
+        Turso[(Turso)]
+        R2[(Cloudflare R2)]
+    end
+    
+    subgraph "External Services"
+        Analytics[Analytics Service]
+        Email[Email Service]
+        Payment[Payment Gateway]
+    end
+    
+    CDN --> Workers
+    CDN --> Pages
+    Workers --> D1
+    Workers --> InstantDB
+    Workers --> Turso
+    Workers --> R2
+    Pages --> Workers
+    Workers --> Analytics
+    Workers --> Email
+    Workers --> Payment
+    DNS --> CDN
+```
+
 **Request Flow**:
 1. Customer visits `customer-store.com` or `username.tarpos.store`
 2. DNS resolves to Cloudflare CDN
@@ -155,17 +240,169 @@ graph TB
 - **CDN Scaling**: Global edge network handles traffic spikes
 - **Storage Scaling**: Cloudflare R2 provides unlimited scalable storage
 
+## Design Block Publishing Workflow
+
+### Dual-Database Architecture for Design Blocks
+
+The system uses a sophisticated dual-database approach to optimize both editing experience and storefront performance:
+
+**Draft Stage (InstantDB)**:
+- All design blocks start as drafts in InstantDB
+- Real-time collaboration during editing via InstantDB's built-in real-time features
+- Multiple editors can work simultaneously with live updates
+- Version control and change tracking
+- Instant preview updates without affecting live storefront
+
+**Published Stage (Cloudflare D1)**:
+- Final design blocks moved to D1 when published
+- Optimized for fast read access at the edge
+- Cached globally via Cloudflare's network
+- Storefront rendering engine reads from D1 for maximum performance
+
+### Publishing Flow Diagram
+
+```mermaid
+graph TB
+    subgraph "Editing Phase"
+        Editor[Block Editor]
+        InstantDB[(InstantDB - Draft Blocks)]
+        Preview[Real-time Preview]
+    end
+    
+    subgraph "Publishing Phase"
+        PublishBtn[Publish Button]
+        Validation[Code Validation]
+        Migration[Block Migration]
+        D1DB[(Cloudflare D1 - Published Blocks)]
+    end
+    
+    subgraph "Storefront Phase"
+        StorefrontEngine[Storefront Rendering]
+        EdgeCache[Edge Cache]
+        Customer[Customer View]
+    end
+    
+    Editor --> InstantDB
+    InstantDB --> Preview
+    Preview --> Editor
+    
+    Editor --> PublishBtn
+    PublishBtn --> Validation
+    Validation --> Migration
+    Migration --> D1DB
+    
+    D1DB --> StorefrontEngine
+    StorefrontEngine --> EdgeCache
+    EdgeCache --> Customer
+    
+    InstantDB -.->|Real-time Updates| Preview
+    D1DB -.->|Cache Invalidation| EdgeCache
+```
+
+### Step-by-Step Publishing Process
+
+1. **Draft Creation**: User creates/edits blocks in the CMS editor
+   - Blocks stored in InstantDB as drafts (`isPublished: false`)
+   - Real-time updates via InstantDB subscriptions
+   - Multiple editors see changes instantly
+
+2. **Real-time Preview**: Changes reflected immediately in preview
+   - Preview renders from InstantDB draft blocks
+   - No impact on live storefront during editing
+   - Collaborative editing with conflict resolution
+
+3. **Validation**: Before publishing, system validates:
+   - Vibe code security (no dangerous patterns)
+   - Block configuration completeness
+   - Dependencies and resource limits
+   - HTML output validation
+
+4. **Publishing**: User clicks "Publish" button
+   - Draft blocks copied from InstantDB to D1
+   - Blocks marked as published in both databases
+   - Cache invalidation triggered for affected pages
+
+5. **Storefront Rendering**: Live storefront uses D1 blocks
+   - Fast edge-cached reads from D1
+   - Optimal performance for customer experience
+   - Global CDN distribution
+
+### Data Flow Architecture
+
+```typescript
+interface BlockPublishingService {
+  // Draft management (InstantDB)
+  saveDraft(block: DraftBlock): Promise<void>
+  getDrafts(pageId: string): Promise<DraftBlock[]>
+  subscribeToChanges(pageId: string, callback: ChangeCallback): Subscription
+  
+  // Publishing workflow
+  validateBlocks(blocks: DraftBlock[]): Promise<ValidationResult>
+  publishBlocks(pageId: string): Promise<PublishResult>
+  
+  // Storefront rendering (D1)
+  getPublishedBlocks(pageId: string): Promise<PublishedBlock[]>
+  invalidateCache(pageId: string): Promise<void>
+}
+
+interface DraftBlock {
+  id: string
+  pageId: string
+  storefrontId: string
+  type: string
+  vibeCode?: string
+  config: Record<string, any>
+  position: number
+  isPublished: boolean // Always false for drafts
+  lastModified: Date
+  modifiedBy: string
+}
+
+interface PublishedBlock {
+  id: string
+  pageId: string
+  type: string
+  vibeCode?: string
+  config: Record<string, any>
+  position: number
+  publishedAt: Date
+  publishedBy: string
+  version: number
+}
+```
+
+### Benefits of This Architecture
+
+**For Editors**:
+- Real-time collaboration without conflicts
+- Instant preview of changes
+- Safe editing environment (no impact on live site)
+- Version control and rollback capabilities
+
+**For Customers**:
+- Ultra-fast storefront loading (D1 + edge cache)
+- Consistent experience (no draft content visible)
+- Global performance optimization
+- High availability and reliability
+
+**For System**:
+- Optimal database usage (InstantDB for real-time, D1 for performance)
+- Efficient caching strategy
+- Scalable architecture
+- Clear separation of concerns
+
 ## Components and Interfaces
 
 ### 1. Storefront Rendering Engine
 
-**Purpose**: Server-side rendering of storefronts with optimal performance
+**Purpose**: Fully dynamic server-side rendering of storefronts with optimal performance
 
 **Key Features**:
-- Static site generation for product pages
-- Dynamic rendering for personalized content
-- Edge-side includes for real-time data
-- Progressive web app capabilities
+- Dynamic rendering for all content from databases
+- Real-time block code execution from D1
+- Product data fetching from InstantDB
+- Vector search capabilities from Turso
+- Edge caching for rendered output
 
 **Interface**:
 ```typescript
@@ -185,18 +422,28 @@ interface RenderContext {
 
 ### 2. Block Management System
 
-**Purpose**: Flexible content block system with code-based customization
+**Purpose**: Pure code-based block system - NO visual drag-and-drop tools like Webstudio/Webflow
 
-**Block Types**:
-- **Vibe Code Blocks**: Custom JavaScript/TypeScript code with React components
-- **Template Blocks**: Pre-built blocks (Hero, Product Grid, Gallery) with vibe code customization
-- **Hybrid Blocks**: Visual editor with vibe code override capability
+**Block Design Philosophy**:
+- **Code-Only Approach**: Users select block type and write vibe code to design it
+- **No Visual Editors**: No drag-and-drop, no toolbars, no visual design tools
+- **Pure Vibe Code**: All block customization done through JavaScript functions
+- **Developer-Focused**: Designed for users who prefer coding over visual tools
+
+**Block Types Available**:
+- **Hero Block**: User writes vibe code for hero sections
+- **Product Grid Block**: User writes vibe code for product displays  
+- **Text Block**: User writes vibe code for content sections
+- **Gallery Block**: User writes vibe code for image galleries
+- **Custom Block**: User writes completely custom vibe code
+- **Blog Block**: User writes vibe code for blog post displays
 
 **Vibe Code System**:
-- Users write React component code that gets stored in InstantDB
+- Users select a block type from a simple list
+- Users write JavaScript functions that return HTML strings
 - Code is executed in a secure sandbox environment
 - Access to storefront data (products, collections, cart) via provided APIs
-- Real-time preview in the block editor
+- Real-time preview shows rendered HTML output
 - Version control for block code changes
 
 **Interface**:
@@ -259,21 +506,38 @@ interface CMSService {
 
 ### 4. Real-time Synchronization Service
 
-**Purpose**: Sync data between POS and storefront systems
+**Purpose**: Sync data between POS and storefront systems using InstantDB's real-time capabilities
 
 **Sync Strategy**:
-- Event-driven synchronization using message queues
-- Conflict resolution for concurrent updates
-- Incremental sync for large datasets
-- Real-time WebSocket updates for live data
+- **InstantDB Real-time Updates**: All real-time synchronization handled by InstantDB's built-in real-time features
+- **Draft Design Blocks**: Stored in InstantDB during editing for real-time collaboration
+- **Published Design Blocks**: Moved to Cloudflare D1 when published for optimal storefront performance
+- **Product/Inventory Sync**: Real-time updates via InstantDB subscriptions
+- **Design Block Publishing Flow**: Draft (InstantDB) → Publish → Final (D1) → Storefront Rendering
 
 **Interface**:
 ```typescript
 interface SyncService {
+  // Real-time sync via InstantDB subscriptions
   syncProducts(tenantId: string, productIds?: string[]): Promise<SyncResult>
   syncInventory(tenantId: string, locationId?: string): Promise<SyncResult>
   syncOrders(tenantId: string, orderIds?: string[]): Promise<SyncResult>
-  subscribeToChanges(tenantId: string, callback: ChangeCallback): Subscription
+  
+  // Design block publishing workflow
+  publishDesignBlocks(tenantId: string, pageId: string): Promise<PublishResult>
+  getDraftBlocks(tenantId: string, pageId: string): Promise<Block[]> // From InstantDB
+  getPublishedBlocks(tenantId: string, pageId: string): Promise<Block[]> // From D1
+  
+  // InstantDB real-time subscriptions
+  subscribeToProductChanges(tenantId: string, callback: ChangeCallback): Subscription
+  subscribeToDesignChanges(tenantId: string, callback: ChangeCallback): Subscription
+}
+
+interface PublishResult {
+  success: boolean
+  publishedBlocks: number
+  errors?: PublishError[]
+  publishedAt: Date
 }
 ```
 
@@ -461,89 +725,148 @@ interface StorefrontOrder extends Order {
 }
 ```
 
-### Database Schema Extensions
+### Multi-Database Schema Architecture
 
+**Cloudflare D1 Schema (Blocks & Design)**:
 ```sql
--- Storefronts table
+-- Storefronts configuration
 CREATE TABLE storefronts (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID NOT NULL REFERENCES tenants(id),
-  domain VARCHAR(255) UNIQUE NOT NULL,
-  custom_domain VARCHAR(255) UNIQUE,
-  theme_config JSONB NOT NULL DEFAULT '{}',
-  settings JSONB NOT NULL DEFAULT '{}',
-  status VARCHAR(20) NOT NULL DEFAULT 'active',
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  id TEXT PRIMARY KEY,
+  tenant_id TEXT NOT NULL,
+  domain TEXT UNIQUE NOT NULL,
+  custom_domain TEXT UNIQUE,
+  theme_config TEXT NOT NULL DEFAULT '{}', -- JSON string
+  settings TEXT NOT NULL DEFAULT '{}', -- JSON string
+  status TEXT NOT NULL DEFAULT 'active',
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch())
 );
 
--- Pages table
+-- Pages structure
 CREATE TABLE pages (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  storefront_id UUID NOT NULL REFERENCES storefronts(id),
-  slug VARCHAR(255) NOT NULL,
-  title VARCHAR(255) NOT NULL,
+  id TEXT PRIMARY KEY,
+  storefront_id TEXT NOT NULL,
+  slug TEXT NOT NULL,
+  title TEXT NOT NULL,
   meta_description TEXT,
-  blocks JSONB NOT NULL DEFAULT '[]',
-  is_published BOOLEAN DEFAULT false,
-  published_at TIMESTAMP WITH TIME ZONE,
-  seo_config JSONB NOT NULL DEFAULT '{}',
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  is_published INTEGER DEFAULT 0, -- SQLite boolean
+  published_at INTEGER,
+  seo_config TEXT NOT NULL DEFAULT '{}', -- JSON string
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  FOREIGN KEY (storefront_id) REFERENCES storefronts(id),
   UNIQUE(storefront_id, slug)
 );
 
--- Blocks table for vibe code storage
+-- Blocks with vibe code
 CREATE TABLE blocks (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  page_id UUID NOT NULL REFERENCES pages(id) ON DELETE CASCADE,
-  type VARCHAR(50) NOT NULL,
-  vibe_code TEXT, -- React component code
-  config JSONB NOT NULL DEFAULT '{}',
+  id TEXT PRIMARY KEY,
+  page_id TEXT NOT NULL,
+  type TEXT NOT NULL,
+  vibe_code TEXT, -- JavaScript function code
+  config TEXT NOT NULL DEFAULT '{}', -- JSON string
   position INTEGER NOT NULL DEFAULT 0,
-  visibility JSONB NOT NULL DEFAULT '{"devices": ["desktop", "tablet", "mobile"], "userTypes": ["guest", "customer"]}',
+  visibility TEXT NOT NULL DEFAULT '{"devices": ["desktop", "tablet", "mobile"], "userTypes": ["guest", "customer"]}',
   code_version INTEGER DEFAULT 1,
-  last_code_update TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  dependencies JSONB DEFAULT '[]', -- Allowed npm packages
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  last_code_update INTEGER DEFAULT (unixepoch()),
+  dependencies TEXT DEFAULT '[]', -- JSON array of allowed packages
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  FOREIGN KEY (page_id) REFERENCES pages(id) ON DELETE CASCADE
 );
 
--- Posts table for blog functionality
+-- Blog posts
 CREATE TABLE posts (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  storefront_id UUID NOT NULL REFERENCES storefronts(id),
-  title VARCHAR(255) NOT NULL,
-  slug VARCHAR(255) NOT NULL,
+  id TEXT PRIMARY KEY,
+  storefront_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  slug TEXT NOT NULL,
   content TEXT NOT NULL,
   excerpt TEXT,
-  featured_image VARCHAR(500),
-  author_id UUID REFERENCES users(id),
-  status VARCHAR(20) DEFAULT 'draft',
-  published_at TIMESTAMP WITH TIME ZONE,
-  seo_config JSONB NOT NULL DEFAULT '{}',
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  featured_image TEXT,
+  author_id TEXT,
+  status TEXT DEFAULT 'draft',
+  published_at INTEGER,
+  seo_config TEXT NOT NULL DEFAULT '{}',
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  FOREIGN KEY (storefront_id) REFERENCES storefronts(id),
   UNIQUE(storefront_id, slug)
 );
 
--- Storefront-specific product extensions
-CREATE TABLE storefront_products (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  storefront_id UUID NOT NULL REFERENCES storefronts(id),
-  product_id UUID NOT NULL REFERENCES products(id),
-  seo_title VARCHAR(255),
-  seo_description TEXT,
-  featured_image VARCHAR(500),
-  gallery JSONB DEFAULT '[]',
-  related_products JSONB DEFAULT '[]',
-  custom_fields JSONB DEFAULT '{}',
-  is_featured BOOLEAN DEFAULT false,
-  sort_order INTEGER DEFAULT 0,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  UNIQUE(storefront_id, product_id)
+-- Indexes for performance
+CREATE INDEX idx_storefronts_tenant ON storefronts(tenant_id);
+CREATE INDEX idx_storefronts_domain ON storefronts(domain);
+CREATE INDEX idx_pages_storefront ON pages(storefront_id);
+CREATE INDEX idx_blocks_page ON blocks(page_id);
+CREATE INDEX idx_blocks_position ON blocks(page_id, position);
+CREATE INDEX idx_posts_storefront ON posts(storefront_id);
+CREATE INDEX idx_posts_status ON posts(storefront_id, status);
+```
+
+**InstantDB Schema (Products, POS Data & Draft Blocks)**:
+```typescript
+// Existing InstantDB schema remains unchanged for POS data
+// Products, orders, inventory, customers continue to live in InstantDB
+// PLUS: Draft design blocks during editing phase
+
+// Draft blocks table in InstantDB (for real-time collaboration)
+interface DraftBlock {
+  id: string
+  pageId: string
+  storefrontId: string
+  type: string
+  vibeCode?: string
+  config: Record<string, any>
+  position: number
+  visibility: VisibilityRules
+  codeVersion: number
+  lastCodeUpdate: Date
+  isPublished: boolean // false for drafts
+  createdAt: Date
+  updatedAt: Date
+}
+
+// Storefront system reads from InstantDB for:
+// - Product catalog (real-time updates)
+// - Inventory levels (real-time updates)
+// - Order processing (real-time updates)
+// - Customer data (real-time updates)
+// - POS integration (real-time updates)
+// - Draft design blocks (real-time collaboration during editing)
+```
+
+**Turso Schema (Vector Search)**:
+```sql
+-- Product embeddings for search
+CREATE TABLE product_embeddings (
+  id TEXT PRIMARY KEY,
+  product_id TEXT NOT NULL,
+  storefront_id TEXT NOT NULL,
+  embedding BLOB NOT NULL, -- Vector embedding
+  content TEXT NOT NULL, -- Searchable content
+  metadata TEXT NOT NULL DEFAULT '{}', -- JSON metadata
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch())
 );
+
+-- Content embeddings for semantic search
+CREATE TABLE content_embeddings (
+  id TEXT PRIMARY KEY,
+  content_type TEXT NOT NULL, -- 'product', 'post', 'page'
+  content_id TEXT NOT NULL,
+  storefront_id TEXT NOT NULL,
+  embedding BLOB NOT NULL,
+  content TEXT NOT NULL,
+  metadata TEXT NOT NULL DEFAULT '{}',
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+
+-- Vector similarity search indexes
+CREATE INDEX idx_product_embeddings_storefront ON product_embeddings(storefront_id);
+CREATE INDEX idx_content_embeddings_storefront ON content_embeddings(storefront_id);
+CREATE INDEX idx_content_embeddings_type ON content_embeddings(content_type, storefront_id);
 ```
 
 ## Error Handling
@@ -577,6 +900,175 @@ interface ErrorResponse {
 - **Graceful Degradation**: Fallback to cached content
 - **Health Checks**: Monitor service availability
 - **Timeout Management**: Prevent hanging requests
+
+## Product Mockups and User Interface Design
+
+### Customer-Facing Storefront Examples
+
+#### Homepage Layout
+```
+🌐 mystore.com (or username.tarpos.store)
+
+┌─────────────────────────────────────────────────────┐
+│ [Logo] MyStore                    🛒 Cart (2) Login │
+├─────────────────────────────────────────────────────┤
+│                                                     │
+│        🎨 HERO BLOCK (Vibe Code)                   │
+│    Welcome to Our Amazing Store                     │
+│    [Shop Now Button]                               │
+│                                                     │
+├─────────────────────────────────────────────────────┤
+│                                                     │
+│    📦 FEATURED PRODUCTS (Dynamic from InstantDB)   │
+│    ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐                │
+│    │ 📱  │ │ 👕  │ │ 👟  │ │ 🎧  │                │
+│    │$299 │ │$49  │ │$89  │ │$199 │                │
+│    └─────┘ └─────┘ └─────┘ └─────┘                │
+│                                                     │
+├─────────────────────────────────────────────────────┤
+│    📝 BLOG POSTS (From D1)                        │
+│    • "How to Style Your Look"                      │
+│    • "New Arrivals This Week"                      │
+│                                                     │
+└─────────────────────────────────────────────────────┘
+```
+
+#### Product Page Layout
+```
+🌐 mystore.com/products/smartphone
+
+┌─────────────────────────────────────────────────────┐
+│ [Logo] MyStore                    🛒 Cart (2) Login │
+├─────────────────────────────────────────────────────┤
+│                                                     │
+│  📱 [Product Images]    📋 iPhone 15 Pro           │
+│  ┌─────────────────┐    💰 $999.99                 │
+│  │                 │    📦 In Stock (15 units)     │
+│  │   Main Image    │                               │
+│  │                 │    🎨 CUSTOM BLOCK (Vibe Code)│
+│  └─────────────────┘    "Why customers love this"  │
+│  [🖼️][🖼️][🖼️][🖼️]                                │
+│                         🛒 [Add to Cart]           │
+│                         ❤️ [Add to Wishlist]       │
+│                                                     │
+├─────────────────────────────────────────────────────┤
+│    📝 Product Description (Rich Text from D1)      │
+│    🔍 Related Products (AI-powered from Turso)     │
+│                                                     │
+└─────────────────────────────────────────────────────┘
+```
+
+### Admin CMS Interface (Expo App Integration)
+
+#### Storefront Management Screen
+```
+TAR POS - Storefront Manager
+
+┌─────────────────────────────────────────────────────┐
+│ ← Back                              🌐 My Storefront │
+├─────────────────────────────────────────────────────┤
+│                                                     │
+│ 🏪 Store Settings                                   │
+│ ┌─────────────────────────────────────────────────┐ │
+│ │ Store Name: [Amazing Electronics Store        ] │ │
+│ │ Domain: [mystore.tarpos.store                 ] │ │
+│ │ Custom Domain: [www.mystore.com               ] │ │
+│ │ Status: 🟢 Active                              │ │
+│ └─────────────────────────────────────────────────┘ │
+│                                                     │
+│ 🎨 Page Builder                                     │
+│ ┌─────────────────────────────────────────────────┐ │
+│ │ Homepage                          [Edit] [View] │ │
+│ │ Products Page                     [Edit] [View] │ │
+│ │ About Us                          [Edit] [View] │ │
+│ │ + Add New Page                                  │ │
+│ └─────────────────────────────────────────────────┘ │
+│                                                     │
+│ 📊 Analytics                                        │
+│ ┌─────────────────────────────────────────────────┐ │
+│ │ 👥 Visitors Today: 245                          │ │
+│ │ 🛒 Orders Today: 12                             │ │
+│ │ 💰 Revenue Today: $2,450                        │ │
+│ └─────────────────────────────────────────────────┘ │
+│                                                     │
+└─────────────────────────────────────────────────────┘
+```
+
+#### Block Editor Interface (Pure Vibe Code - No Visual Tools)
+```
+TAR POS - Vibe Code Block Editor
+
+┌─────────────────────────────────────────────────────┐
+│ ← Back to Pages                    Homepage Editor   │
+├─────────────────────────────────────────────────────┤
+│                                                     │
+│ 📱 Live Preview                     📝 Block Types  │
+│ ┌─────────────────────────┐        ┌─────────────┐  │
+│ │ [Hero Section]          │        │ □ Hero      │  │
+│ │ Welcome to My Store     │        │ □ Products  │  │
+│ │ [Shop Now]              │        │ □ Text      │  │
+│ ├─────────────────────────┤        │ □ Gallery   │  │
+│ │ [Product Grid]          │        │ □ Blog      │  │
+│ │ [📱] [👕] [👟] [🎧]    │        │ □ Custom    │  │
+│ ├─────────────────────────┤        └─────────────┘  │
+│ │ [Custom Vibe Block]     │                         │
+│ │ "Special Offers"        │        🔧 Selected Block│
+│ └─────────────────────────┘        ┌─────────────┐  │
+│                                    │ Type: Hero  │  │
+│ 💻 Vibe Code Editor (Full Screen)  │ Position: 1 │  │
+│ ┌─────────────────────────────────┐ │ [Delete]    │  │
+│ │ function renderHero(storefront, │ │ [Duplicate] │  │
+│ │   products, helpers) {          │ └─────────────┘  │
+│ │   return `                      │                  │
+│ │     <section class="hero        │ 💾 Actions      │
+│ │       bg-blue-600 text-white    │ ┌─────────────┐  │
+│ │       py-20">                   │ │ [Save Draft]│  │
+│ │       <div class="container     │ │ [Preview]   │  │
+│ │         mx-auto text-center">   │ │ [Publish]   │  │
+│ │         <h1 class="text-4xl     │ └─────────────┘  │
+│ │           font-bold mb-4">      │                  │
+│ │           ${helpers.escapeHtml( │                  │
+│ │             storefront.name)}   │                  │
+│ │         </h1>                   │                  │
+│ │         <a href="/products"     │                  │
+│ │           class="bg-white       │                  │
+│ │           text-blue-600 px-8    │                  │
+│ │           py-3 rounded-lg">     │                  │
+│ │           Shop Now              │                  │
+│ │         </a>                    │                  │
+│ │       </div>                    │                  │
+│ │     </section>                  │                  │
+│ │   `;                            │                  │
+│ │ }                               │                  │
+│ └─────────────────────────────────┘                  │
+│                                                     │
+└─────────────────────────────────────────────────────┘
+```
+
+### Key Features Demonstrated
+
+**Customer Experience Features:**
+- ⚡ **Ultra-fast loading** (SvelteKit + Cloudflare edge)
+- 📱 **Fully responsive** design for all devices
+- 🛒 **Shopping cart** with real-time inventory updates
+- 🔍 **Smart search** powered by vector embeddings (Turso)
+- 💳 **Secure checkout** with multiple payment options
+- 🎨 **Custom blocks** created with vibe code system
+
+**Store Owner Experience Features:**
+- 🎨 **Visual block editor** with drag-and-drop functionality
+- 💻 **Vibe code system** for unlimited customization
+- 📊 **Real-time analytics** dashboard integration
+- 🌐 **Custom domain** mapping with SSL certificates
+- 📱 **Mobile CMS** management through Expo app
+- 🔄 **Live preview** of storefront changes
+
+**Technical Architecture Features:**
+- 🚀 **Multi-tenant** architecture supporting millions of stores
+- 🔄 **Real-time synchronization** between POS and storefront
+- 🗄️ **Multi-database** system (D1, InstantDB, Turso)
+- 🌍 **Global CDN** for fast content delivery worldwide
+- 🔒 **Enterprise security** with tenant isolation
 
 ## Testing Strategy
 
